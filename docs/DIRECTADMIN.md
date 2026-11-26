@@ -51,9 +51,11 @@ npm install --omit=dev
 
 Only the packaged backend dependencies are installed. Keep the generated package lock after installation for subsequent deployments. The full development monorepo should not be installed in the production public directory.
 
+The prepared API loads shared JavaScript through relative imports from `packages/shared/src/`. Its production `package.json` deliberately has no `@bhope/shared` dependency: CloudLinux may place `node_modules` in a separate virtual environment, which can break local workspace links. If an older upload reports `Cannot find package '@bhope/shared'`, run `git pull --ff-only` and **`npm run deploy:prepare`** on your computer, upload/extract the new complete portable ZIP over the generated files, and run **Run npm install** again. Preserve the host's existing `.env` and the manager's `node_modules` link. Repacking the old build with `deploy:zip` alone does not update runtime imports.
+
 ## 4. Set environment variables
 
-Use the Node manager's environment-variable controls. The included `.env.example` documents all settings; a private `.env` outside `public/` is also supported.
+Create **`hope_api/.env`**, alongside `app.cjs` and `package.json`, with permissions `600`. The API, migration script, and account-creation script load this file automatically. The included `.env.example` documents all settings. Node manager environment-variable controls are also supported, but manually set panel values take precedence over the same names in `.env`; remove any conflicting duplicates.
 
 ```dotenv
 NODE_ENV=production
@@ -63,12 +65,12 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=jobready_bhope_db
 DB_USER=jobready_bhope_db_admin
-DB_PASSWORD=SET_THE_ROTATED_PASSWORD_ON_THE_HOST
+DB_PASSWORD="SET_THE_DATABASE_PASSWORD_PRIVATELY_ON_THE_HOST"
 DB_POOL_SIZE=5
 ALLOWED_ORIGINS=https://bhope-api.billucsolutions.co.ke
 TRUST_PROXY=0
 ALLOW_REGISTRATION=true
-DEEPSEEK_API_KEY=SET_ON_THE_HOST
+DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_MODEL=deepseek-flash
 AI_DAILY_LIMIT=10
@@ -108,18 +110,18 @@ The account tool prompts for a hidden password in an interactive terminal. It al
 
 When the Node.js application page offers **Run npm install**, **Run JS Script**, and environment-variable controls, SSH is not required for these setup steps. Upload and extract the compiled package, configure the application and database settings above, and run the dependency installation from the panel.
 
-Temporarily add these environment variables to the Node.js application:
+Temporarily add these settings to the host's private `hope_api/.env` (or to the Node manager if that is your chosen configuration method):
 
-| Variable               | Value                                                               |
-| ---------------------- | ------------------------------------------------------------------- |
-| `CREATE_USER_EMAIL`    | Your staff email address                                            |
-| `CREATE_USER_NAME`     | Your display name                                                   |
-| `CREATE_USER_ROLE`     | `admin` for the first account; `editor` for a later editor account  |
-| `CREATE_USER_PASSWORD` | A new password of 10–128 characters, entered privately in the panel |
+| Variable               | Value                                                              |
+| ---------------------- | ------------------------------------------------------------------ |
+| `CREATE_USER_EMAIL`    | Your staff email address                                           |
+| `CREATE_USER_NAME`     | Your display name                                                  |
+| `CREATE_USER_ROLE`     | `admin` for the first account; `editor` for a later editor account |
+| `CREATE_USER_PASSWORD` | A new password of 10–128 characters, entered privately in the file |
 
-Save the variables. Use **Run JS Script** to run `db:migrate`, then `user:create`. These are script names from the packaged `package.json`; do not put the password into the script command or its arguments. The command reads the temporary variables and reports the created account's email and role. If a required setting is missing, it exits with the missing variable names rather than waiting for input the panel cannot provide.
+Save the file, quoting passwords so special characters are preserved. Use **Run JS Script** to select `db:migrate`, then `user:create`, leaving their **arguments** fields empty. These are script names from the packaged `package.json`; do not put the password into the script command or its arguments. The command reads the temporary settings and reports the created account's email and role. If a required setting is missing, it exits with the missing variable names rather than waiting for input the panel cannot provide.
 
-After the account is created, remove all four `CREATE_USER_*` variables and save. Restart the application, then sign into `/console/` with that email and password. The temporary setup variables are not needed for normal operation. There is no public account-bootstrap endpoint.
+After the account is created, remove all four `CREATE_USER_*` settings from `.env` (or the panel) and save. Restart the application, then sign into `/console/` with that email and password. The temporary setup settings are not needed for normal operation. There is no public account-bootstrap endpoint.
 
 If the panel does not provide **Run JS Script**, ask the hosting provider to enable that capability, provide an account Terminal, or confirm SSH access. A connection timeout or refusal before authentication requires checking the SSH hostname/IP, port, firewall/IP restrictions, and account access. Creating or authorizing a new key does not make a closed or unreachable port accessible. DirectAdmin's SSH-key screen and its separate Login Keys feature are not a browser terminal.
 

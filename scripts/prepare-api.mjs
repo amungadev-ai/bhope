@@ -2,6 +2,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { createDeploymentArchive } from './zip-api.mjs';
+import { vendorApiShared } from './vendor-api-shared.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = `${root}/.local/deploy-api`;
 await rm(output, { recursive: true, force: true });
@@ -14,7 +15,7 @@ await cp(`${root}/apps/api/.env.example`, `${output}/.env.example`);
 await cp(`${root}/apps/dashboard/dist`, `${output}/public/console`, { recursive: true });
 await cp(`${root}/packages/shared`, `${output}/packages/shared`, { recursive: true });
 const packageJson = JSON.parse(await readFile(`${root}/apps/api/package.json`, 'utf8'));
-packageJson.dependencies['@bhope/shared'] = 'file:./packages/shared';
+delete packageJson.dependencies['@bhope/shared'];
 delete packageJson.devDependencies;
 packageJson.scripts = {
   start: 'node app.cjs',
@@ -32,7 +33,11 @@ for (const name of ['migrate', 'create-user']) {
   }).outputText;
   await writeFile(`${output}/scripts/${name}.mjs`, compiled);
 }
+await vendorApiShared(output);
 console.log('Hosting package prepared in .local/deploy-api/');
+console.log(
+  'Shared JavaScript is included directly; no workspace package installation is required.',
+);
 console.log(
   'Upload this directory’s contents into hope_api. Set the domain document root to hope_api/public.',
 );

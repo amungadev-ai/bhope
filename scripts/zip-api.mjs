@@ -14,12 +14,20 @@ export async function createDeploymentArchive() {
     'dist/index.js',
     'migrations/001_initial.sql',
     'packages/shared/package.json',
+    'packages/shared/src/index.js',
     'public/console/index.html',
     'scripts/create-user.mjs',
     'scripts/migrate.mjs',
   ])
     if (!names.has(name))
       throw new Error(`Prepared package is missing ${name}. Run npm run deploy:prepare first.`);
+  const manifest = JSON.parse(
+    entries.find((entry) => entry.name === 'package.json').data.toString(),
+  );
+  if (manifest.dependencies?.['@bhope/shared'])
+    throw new Error(
+      'Prepared package still requires a workspace link. Run npm run deploy:prepare first.',
+    );
   if (entries.some((entry) => /(^|\/)\.env$|\.(?:sqlite(?:-.*)?|db|xml)$/i.test(entry.name)))
     throw new Error(
       'Remove environment files, local databases, and Bible XMLs from the prepared package.',

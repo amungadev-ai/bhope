@@ -93,7 +93,7 @@ npm run check
 npm run deploy:prepare
 ```
 
-The first command runs typechecks, mobile lint, reference/parser tests, deployment archive tests, API authorization and privacy tests, and production API/studio builds. The second creates a minimal shared-hosting package in `.local/deploy-api/` and a ready-to-upload **`.local/bhope-api-portable.zip`**, without requiring Expo on the server. The ZIP preserves folders when extracted on Linux, including when it is created on Windows. Use `npm run deploy:zip` to repackage an existing build. See [DirectAdmin setup](docs/DIRECTADMIN.md) and [architecture and current scope](docs/ARCHITECTURE.md).
+The first command runs typechecks, mobile lint, reference/parser tests, deployment package tests, API authorization and privacy tests, and production API/studio builds. The second creates a minimal shared-hosting package in `.local/deploy-api/` and a ready-to-upload **`.local/bhope-api-portable.zip`**, without requiring Expo on the server. The ZIP preserves folders when extracted on Linux, including when it is created on Windows. The API includes shared JavaScript directly and supports CloudLinux's separate dependency directory. Use `npm run deploy:zip` to repackage an existing build. See [DirectAdmin setup](docs/DIRECTADMIN.md) and [architecture and current scope](docs/ARCHITECTURE.md).
 
 DirectAdmin deployment can also use File Manager and the Node.js manager's **Run JS Script** controls, including first-admin creation from temporary environment variables. SSH is optional when those controls are available; follow the [setup without a terminal](docs/DIRECTADMIN.md#with-file-manager-and-the-nodejs-manager).
 

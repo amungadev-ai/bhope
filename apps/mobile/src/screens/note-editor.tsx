@@ -68,6 +68,8 @@ export default function NoteScreen() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editorBounds, setEditorBounds] = useState({ width: 0, height: 0 });
   const [draggingAi, setDraggingAi] = useState(false);
+  const [toolbarPosition, setToolbarPosition] = useState({ x: 0, y: 0 });
+  const [draggingToolbar, setDraggingToolbar] = useState(false);
   const editor = useRef<RichEditorHandle>(null);
   const lastInsert = useRef('');
   useEffect(() => {
@@ -251,6 +253,33 @@ export default function NoteScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={
+                sidebarOpen ? 'Collapse formatting sidebar' : 'Open formatting sidebar'
+              }
+              accessibilityState={{ expanded: sidebarOpen }}
+              aria-expanded={sidebarOpen}
+              onPress={() => {
+                setSidebarOpen(!sidebarOpen);
+                setDraggingToolbar(false);
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 10,
+                minHeight: 36,
+                borderRadius: 11,
+                backgroundColor: colors.soft,
+              }}
+            >
+              <Icon name="options-outline" size={17} />
+              <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.ink }}>
+                {sw ? 'Mpangilio' : 'Format'}
+              </Text>
+              <Icon name={sidebarOpen ? 'chevron-back' : 'chevron-forward'} size={13} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel="Edit note details"
               onPress={() => {
                 Keyboard.dismiss();
@@ -283,30 +312,6 @@ export default function NoteScreen() {
                     : 'Personal reflection'}
               </Text>
               <Icon name="chevron-down" size={12} color={colors.muted} />
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                sidebarOpen ? 'Collapse formatting sidebar' : 'Open formatting sidebar'
-              }
-              accessibilityState={{ expanded: sidebarOpen }}
-              aria-expanded={sidebarOpen}
-              onPress={() => setSidebarOpen(!sidebarOpen)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingHorizontal: 10,
-                minHeight: 36,
-                borderRadius: 11,
-                backgroundColor: colors.soft,
-              }}
-            >
-              <Icon name="options-outline" size={17} />
-              <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.ink }}>
-                {sw ? 'Mpangilio' : 'Format'}
-              </Text>
-              <Icon name={sidebarOpen ? 'chevron-back' : 'chevron-forward'} size={13} />
             </Pressable>
           </View>
         </View>
@@ -342,9 +347,9 @@ export default function NoteScreen() {
                 }}
               />
             </View>
-            {draggingAi ? (
+            {draggingAi || draggingToolbar ? (
               <View
-                testID="ai-drag-overlay"
+                testID={draggingAi ? 'ai-drag-overlay' : 'toolbar-drag-overlay'}
                 style={{ position: 'absolute', inset: 0, zIndex: 2 }}
               />
             ) : null}
@@ -360,7 +365,13 @@ export default function NoteScreen() {
             />
           </View>
           {sidebarOpen ? (
-            <EditorToolbar onCommand={(command) => editor.current?.command(command)} />
+            <EditorToolbar
+              onCommand={(command) => editor.current?.command(command)}
+              bounds={editorBounds}
+              position={toolbarPosition}
+              onPositionChange={setToolbarPosition}
+              onDraggingChange={setDraggingToolbar}
+            />
           ) : null}
         </View>
         {error ? <Text style={[styles.error, { paddingHorizontal: 14 }]}>{error}</Text> : null}

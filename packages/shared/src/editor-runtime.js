@@ -4,6 +4,7 @@ export function editorRuntime(config, extract) {
   let savedRange = null;
   let decorating = false;
   let composing = false;
+  let applyingCommand = false;
   let pressOrigin = null;
   let timer;
   let pressTimer;
@@ -27,6 +28,7 @@ export function editorRuntime(config, extract) {
             const text = read(child);
             if (child.nodeType !== 1 || child.tagName !== 'LI') return text;
             index += 1;
+            if (node.hasAttribute('data-checklist')) return `${text.trimEnd()}\n`;
             return `${node.tagName === 'OL' ? `${index}. ` : '• '}${text.trimEnd()}\n`;
           })
           .join('');
@@ -84,7 +86,10 @@ export function editorRuntime(config, extract) {
         const checked =
           child.tagName === 'INPUT' && (child.checked || child.hasAttribute('checked'));
         const checkbox = child.tagName === 'INPUT' && child.getAttribute('type') === 'checkbox';
+        const checklist = child.tagName === 'UL' && child.hasAttribute('data-checklist');
+        const marker = checkbox && child.hasAttribute('data-checklist-marker');
         for (const attribute of [...child.attributes]) child.removeAttribute(attribute.name);
+        if (checklist) child.setAttribute('data-checklist', 'true');
         if (child.tagName === 'INPUT') {
           if (!checkbox) {
             child.remove();
@@ -93,6 +98,7 @@ export function editorRuntime(config, extract) {
           child.setAttribute('type', 'checkbox');
           child.setAttribute('contenteditable', 'false');
           child.setAttribute('aria-label', 'Checklist item');
+          if (marker) child.setAttribute('data-checklist-marker', 'true');
           if (checked) child.setAttribute('checked', 'checked');
         }
         visit(child);
@@ -232,19 +238,155 @@ export function editorRuntime(config, extract) {
       undo: 'undo',
       redo: 'redo',
     };
-    if (commands[name]) document.execCommand(commands[name], false);
-    else if (name === 'heading') document.execCommand('formatBlock', false, 'h2');
-    else if (name === 'paragraph') document.execCommand('formatBlock', false, 'p');
-    else if (name === 'checkbox')
-      document.execCommand(
-        'insertHTML',
-        false,
-        '<p><input type="checkbox" contenteditable="false" aria-label="Checklist item">&nbsp;</p>',
-      );
+    applyingCommand = true;
+    try {
+      if (name === 'checkbox') toggleChecklist();
+      else if (name === 'ordered' || name === 'unordered') {
+        const checklists = selectedLists().filter((list) => list.hasAttribute('data-checklist'));
+        clearChecklists(checklists);
+        if (name === 'ordered' || !checklists.length) document.execCommand(commands[name], false);
+      } else if (commands[name]) document.execCommand(commands[name], false);
+      else if (name === 'heading') document.execCommand('formatBlock', false, 'h2');
+      else if (name === 'paragraph') document.execCommand('formatBlock', false, 'p');
+    } finally {
+      applyingCommand = false;
+    }
+    syncChecklists();
     remember();
     emit();
     clearTimeout(timer);
     timer = setTimeout(highlight, 120);
+  }
+  function selectedLists() {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount) return [];
+    const range = selection.getRangeAt(0);
+    return [...editor.querySelectorAll('ul,ol')].filter((list) => range.intersectsNode(list));
+  }
+  function currentChecklistItem() {
+    const node = window.getSelection()?.anchorNode;
+    const element = node?.nodeType === 3 ? node.parentElement : node;
+    return element?.closest?.('ul[data-checklist] > li') ?? null;
+  }
+  function clearChecklists(lists) {
+    for (const list of lists) {
+      list.removeAttribute('data-checklist');
+      for (const marker of list.querySelectorAll('input[data-checklist-marker]'))
+        if (marker.closest('ul,ol') === list) marker.remove();
+    }
+  }
+  function toggleChecklist() {
+    const lists = selectedLists();
+    const range = window.getSelection().getRangeAt(0);
+    const outside = range.cloneContents();
+    for (const list of outside.querySelectorAll('ul[data-checklist]')) list.remove();
+    const withinChecklist = (node) =>
+      (node.nodeType === 3 ? node.parentElement : node).closest('ul[data-checklist]');
+    const togglingOff =
+      lists.length &&
+      lists.every((list) => list.hasAttribute('data-checklist')) &&
+      ((withinChecklist(range.startContainer) && withinChecklist(range.endContainer)) ||
+        !outside.textContent.trim());
+    if (togglingOff) clearChecklists(lists);
+    if (togglingOff || !document.queryCommandState('insertUnorderedList'))
+      document.execCommand('insertUnorderedList', false);
+    if (!togglingOff)
+      for (const list of selectedLists())
+        if (list.tagName === 'UL') list.setAttribute('data-checklist', 'true');
+  }
+  function syncChecklists() {
+    for (const list of editor.querySelectorAll('[data-checklist]')) {
+      if (list.tagName !== 'UL') {
+        list.removeAttribute('data-checklist');
+        continue;
+      }
+      for (const item of list.children) {
+        if (item.tagName !== 'LI') continue;
+        const markers = [...item.children].filter((child) =>
+          child.matches('input[type="checkbox"]'),
+        );
+        const marker = markers.shift() ?? document.createElement('input');
+        for (const duplicate of markers) duplicate.remove();
+        marker.setAttribute('type', 'checkbox');
+        marker.setAttribute('contenteditable', 'false');
+        marker.setAttribute('data-checklist-marker', 'true');
+        marker.setAttribute('aria-label', 'Checklist item');
+        if (item.firstChild !== marker) item.prepend(marker);
+        const selection = window.getSelection();
+        if (selection?.isCollapsed && selection.anchorNode === item && selection.anchorOffset === 0)
+          selection.collapse(item, 1);
+      }
+    }
+    for (const marker of editor.querySelectorAll('input[data-checklist-marker]'))
+      if (!marker.parentElement.matches('ul[data-checklist] > li')) marker.remove();
+  }
+  function checklistEnter(event) {
+    const item = currentChecklistItem();
+    if (
+      !item ||
+      composing ||
+      event.isComposing ||
+      !event.cancelable ||
+      event.defaultPrevented ||
+      event.target?.tagName === 'INPUT' ||
+      applyingCommand
+    )
+      return;
+    event.preventDefault();
+    applyingCommand = true;
+    try {
+      const empty =
+        !item.textContent.replace(/\u00a0/g, ' ').trim() && !item.querySelector('ul,ol');
+      if (empty && window.getSelection().isCollapsed)
+        item.replaceChildren(document.createElement('br'));
+      document.execCommand('insertParagraph', false);
+      syncChecklists();
+      const next = currentChecklistItem();
+      if (next && next !== item) {
+        const marker = next.querySelector(':scope > input[data-checklist-marker]');
+        marker.checked = false;
+        marker.removeAttribute('checked');
+      }
+    } finally {
+      applyingCommand = false;
+    }
+    remember();
+    emit();
+    clearTimeout(timer);
+    timer = setTimeout(highlight, 180);
+  }
+  function checklistBackspace(event) {
+    const item = currentChecklistItem();
+    const selection = window.getSelection();
+    if (
+      !item ||
+      !selection?.isCollapsed ||
+      composing ||
+      event.isComposing ||
+      !event.cancelable ||
+      event.defaultPrevented ||
+      event.target?.tagName === 'INPUT' ||
+      applyingCommand
+    )
+      return;
+    const before = document.createRange();
+    before.selectNodeContents(item);
+    before.setEnd(selection.anchorNode, selection.anchorOffset);
+    const preceding = before.cloneContents();
+    if (preceding.textContent || preceding.querySelector('br,ul,ol')) return;
+    event.preventDefault();
+    applyingCommand = true;
+    try {
+      item.querySelector(':scope > input[data-checklist-marker]')?.remove();
+      document.execCommand(item.previousElementSibling ? 'delete' : 'insertUnorderedList', false);
+      syncChecklists();
+    } finally {
+      applyingCommand = false;
+    }
+    remember();
+    emit();
+    clearTimeout(timer);
+    timer = setTimeout(highlight, 180);
   }
   function appendText(text) {
     const reference = extract(text.split('\n')[0])[0];
@@ -270,17 +412,23 @@ export function editorRuntime(config, extract) {
   });
   editor.addEventListener('compositionend', () => {
     composing = false;
+    syncChecklists();
     remember();
     emit();
     clearTimeout(timer);
     timer = setTimeout(highlight, 180);
   });
   editor.addEventListener('input', (event) => {
-    if (decorating) return;
+    if (decorating || applyingCommand) return;
+    if (!composing && !event.isComposing) syncChecklists();
     remember();
     emit();
     clearTimeout(timer);
     if (!composing && !event.isComposing) timer = setTimeout(highlight, 180);
+  });
+  editor.addEventListener('beforeinput', (event) => {
+    if (event.inputType === 'insertParagraph') checklistEnter(event);
+    else if (event.inputType === 'deleteContentBackward') checklistBackspace(event);
   });
   editor.addEventListener('change', (event) => {
     if (event.target.matches('input[type="checkbox"]')) {
@@ -339,6 +487,10 @@ export function editorRuntime(config, extract) {
         remember();
         send({ type: 'reference', reference, intent: 'actions' });
       }
+    } else if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      checklistEnter(event);
+    } else if (event.key === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      checklistBackspace(event);
     }
   });
   document.addEventListener('selectionchange', () => {
@@ -378,6 +530,18 @@ export function editorRuntime(config, extract) {
           return p.outerHTML;
         })
         .join('');
+  // Upgrade the earlier single-paragraph checkbox without discarding its text.
+  for (const paragraph of editor.querySelectorAll('p')) {
+    if (!paragraph.firstChild?.matches?.('input[type="checkbox"]') || paragraph.closest('li'))
+      continue;
+    const list = document.createElement('ul');
+    list.setAttribute('data-checklist', 'true');
+    const item = document.createElement('li');
+    item.append(...paragraph.childNodes);
+    list.append(item);
+    paragraph.replaceWith(list);
+  }
+  syncChecklists();
   highlight();
   editor.dataset.empty = String(!plainText().trim());
   send({ type: 'ready' });

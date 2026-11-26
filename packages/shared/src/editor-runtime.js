@@ -8,13 +8,13 @@ export function editorRuntime(config, extract) {
   let timer;
   let pressTimer;
   let longPressed = false;
+  const blocks = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'LI', 'BLOCKQUOTE']);
   const send = (payload) => {
     if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(payload));
     else window.parent.postMessage({ beaconEditor: true, payload }, '*');
   };
   function plainText() {
     // Read the DOM structure directly: innerText on a hidden clone can be empty.
-    const blocks = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'LI', 'BLOCKQUOTE']);
     function read(node) {
       if (node.nodeType === 3) return node.textContent.replace(/\u00a0/g, ' ');
       if (node.nodeType !== 1) return '';
@@ -114,7 +114,25 @@ export function editorRuntime(config, extract) {
       send({ type: 'selection', text: selection.toString() });
     }
   }
-  function offsetSelection() {
+  // Bookmark each endpoint inside its own paragraph/list item. A document-wide
+  // text offset cannot distinguish the end of a paragraph from a new empty one.
+  function positionLength(node) {
+    if (node.nodeType === 3) return node.length;
+    if (node.nodeName === 'BR' || node.nodeName === 'INPUT') return 1;
+    return (
+      [...node.childNodes].reduce((total, child) => total + positionLength(child), 0) +
+      (blocks.has(node.nodeName) ? 1 : 0)
+    );
+  }
+  function bookmarkPoint(node, offset) {
+    const element = node.nodeType === 3 ? node.parentElement : node;
+    const scope = element.closest('p,div,h1,h2,h3,li,blockquote') ?? editor;
+    const before = document.createRange();
+    before.selectNodeContents(scope);
+    before.setEnd(node, offset);
+    return { scope, offset: positionLength(before.cloneContents()) };
+  }
+  function bookmarkSelection() {
     const selection = window.getSelection();
     if (
       !selection?.rangeCount ||
@@ -122,47 +140,43 @@ export function editorRuntime(config, extract) {
       !editor.contains(selection.focusNode)
     )
       return null;
-    const range = selection.getRangeAt(0);
-    const before = range.cloneRange();
-    before.selectNodeContents(editor);
-    before.setEnd(range.startContainer, range.startOffset);
     return {
-      start: before.toString().length,
-      end: before.toString().length + range.toString().length,
+      anchor: bookmarkPoint(selection.anchorNode, selection.anchorOffset),
+      focus: bookmarkPoint(selection.focusNode, selection.focusOffset),
     };
   }
-  function restoreOffsets(offsets) {
-    if (!offsets) return;
-    const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
-    let node,
-      count = 0,
-      start = null,
-      end = null;
-    while ((node = walker.nextNode())) {
-      if (!start && count + node.length >= offsets.start)
-        start = [node, Math.max(0, offsets.start - count)];
-      if (!end && count + node.length >= offsets.end) {
-        end = [node, Math.max(0, offsets.end - count)];
-        break;
+  function resolvePoint({ scope, offset }) {
+    let remaining = offset;
+    function visit(parent) {
+      for (const [index, child] of [...parent.childNodes].entries()) {
+        const length = positionLength(child);
+        if (remaining > length) {
+          remaining -= length;
+          continue;
+        }
+        if (child.nodeType === 3) return [child, remaining];
+        if (child.nodeName === 'BR' || child.nodeName === 'INPUT')
+          return [parent, index + remaining];
+        if (blocks.has(child.nodeName) && remaining === length) return [parent, index + 1];
+        return visit(child);
       }
-      count += node.length;
+      return [parent, parent.childNodes.length];
     }
-    if (start && end) {
-      const range = document.createRange();
-      range.setStart(...start);
-      range.setEnd(...end);
-      const selection = window.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      savedRange = range.cloneRange();
-    }
+    return visit(scope);
+  }
+  function restoreSelection(bookmark) {
+    if (!bookmark) return;
+    const selection = window.getSelection();
+    selection.setBaseAndExtent(...resolvePoint(bookmark.anchor), ...resolvePoint(bookmark.focus));
+    savedRange = selection.getRangeAt(0).cloneRange();
   }
   function highlight() {
     if (decorating || composing) return;
+    if (!editor.querySelector('[data-scripture]') && !extract(editor.textContent).length) return;
     decorating = true;
-    const offsets = offsetSelection();
+    const bookmark = bookmarkSelection();
     for (const span of editor.querySelectorAll('[data-scripture]'))
-      span.replaceWith(document.createTextNode(span.textContent));
+      span.replaceWith(...span.childNodes);
     editor.normalize();
     const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
     const nodes = [];
@@ -186,7 +200,7 @@ export function editorRuntime(config, extract) {
       fragment.appendChild(document.createTextNode(text.slice(cursor)));
       node.replaceWith(fragment);
     }
-    restoreOffsets(offsets);
+    restoreSelection(bookmark);
     decorating = false;
   }
   function emit() {

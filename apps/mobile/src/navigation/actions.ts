@@ -41,7 +41,7 @@ export type RootRoutes = {
 };
 export const navigationRef = createNavigationContainerRef<RootRoutes>();
 export function navigate<Name extends keyof RootRoutes>(name: Name, params?: RootRoutes[Name]) {
-  if (navigationRef.isReady()) navigationRef.dispatch(CommonActions.navigate({ name, params }));
+  if (navigationRef.isReady()) navigationRef.dispatch(CommonActions.navigate(name, params));
 }
 export function openTab<Name extends keyof TabRoutes>(name: Name, params?: TabRoutes[Name]) {
   navigate('Main', { screen: name, params } as NavigatorScreenParams<TabRoutes>);

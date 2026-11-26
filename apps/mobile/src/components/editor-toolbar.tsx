@@ -21,10 +21,16 @@ export function EditorToolbar({ onCommand }: { onCommand: (command: EditorComman
       testID="formatting-sidebar"
       style={{
         width: 60,
-        marginLeft: 6,
-        marginBottom: 6,
+        position: 'absolute',
+        left: 6,
+        top: 0,
+        bottom: 6,
+        maxHeight: 448,
+        zIndex: 4,
+        elevation: 6,
         borderRadius: 14,
         backgroundColor: colors.soft,
+        boxShadow: '2px 3px 12px #00000018',
         overflow: 'hidden',
       }}
     >

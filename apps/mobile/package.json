@@ -1,6 +1,6 @@
 {
   "name": "@bhope/mobile",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "main": "index.ts",
   "dependencies": {
     "@bhope/shared": "0.1.0",

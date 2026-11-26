@@ -310,10 +310,7 @@ export default function NoteScreen() {
             </Pressable>
           </View>
         </View>
-        <View style={{ flex: 1, flexDirection: 'row' }}>
-          {sidebarOpen ? (
-            <EditorToolbar onCommand={(command) => editor.current?.command(command)} />
-          ) : null}
+        <View style={{ flex: 1, position: 'relative' }}>
           <View
             testID="note-writing-area"
             onLayout={(event) => {
@@ -326,7 +323,7 @@ export default function NoteScreen() {
             }}
             style={{ flex: 1, minWidth: 0, position: 'relative' }}
           >
-            <View style={{ flex: 1, paddingHorizontal: sidebarOpen ? 8 : 14 }}>
+            <View style={{ flex: 1, paddingHorizontal: 14 }}>
               <RichEditor
                 key={note.id}
                 ref={editor}
@@ -362,6 +359,9 @@ export default function NoteScreen() {
               }}
             />
           </View>
+          {sidebarOpen ? (
+            <EditorToolbar onCommand={(command) => editor.current?.command(command)} />
+          ) : null}
         </View>
         {error ? <Text style={[styles.error, { paddingHorizontal: 14 }]}>{error}</Text> : null}
       </KeyboardAvoidingView>

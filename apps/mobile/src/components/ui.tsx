@@ -45,11 +45,13 @@ export function Screen({
   header,
   safeTop = false,
   safeBottom = false,
+  contentStyle,
 }: {
   children: ReactNode;
   header?: ReactNode;
   safeTop?: boolean;
   safeBottom?: boolean;
+  contentStyle?: StyleProp<ViewStyle>;
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -67,7 +69,7 @@ export function Screen({
       {header}
       {scroll ? (
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >

@@ -11,7 +11,7 @@ import {
 import { useApp } from '../lib/context';
 import { bible, getPassage, listBookmarks, listNotes, toggleBookmark } from '../lib/storage';
 import { insertIntoNote, openBible } from '../navigation/actions';
-import { Body, Button, fonts, Icon, IconButton, Sheet, useUi, type IconName } from './ui';
+import { Body, Button, fonts, Icon, Sheet, useUi, type IconName } from './ui';
 export function ScriptureSheet({
   reference,
   onClose,
@@ -21,11 +21,11 @@ export function ScriptureSheet({
   onBookmarkChange,
   showOpenBible = true,
   version,
-  showActionsOnOpen = false,
+  compactPreview = false,
 }: {
   reference: Reference | null;
   version?: Language;
-  showActionsOnOpen?: boolean;
+  compactPreview?: boolean;
   onClose: () => void;
   onInsert?: (text: string) => void;
   sourceNoteId?: string;
@@ -48,7 +48,6 @@ export function ScriptureSheet({
   }>({ key: '', verses: [], saved: [], notes: [] });
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [menu, setMenu] = useState(false);
   const [choosingNote, setChoosingNote] = useState(false);
   useEffect(() => {
     if (!reference) return;
@@ -67,7 +66,6 @@ export function ScriptureSheet({
           setError('');
           setNotice('');
           setChoosingNote(false);
-          setMenu(showActionsOnOpen);
         }
       })
       .catch(() => {
@@ -76,7 +74,7 @@ export function ScriptureSheet({
     return () => {
       active = false;
     };
-  }, [reference, language, key, showActionsOnOpen]);
+  }, [reference, language, key]);
   const loading = Boolean(reference) && data.key !== key;
   const passageText = reference
     ? `${formatReference(reference, language)}\n${data.verses.map((verse) => `${verse.verse} ${verse.text}`).join('\n')}`
@@ -180,7 +178,6 @@ export function ScriptureSheet({
         } else if (sourceNoteId) void addToNote(sourceNoteId);
         else {
           setChoosingNote(true);
-          setMenu(false);
         }
       },
     },
@@ -192,48 +189,73 @@ export function ScriptureSheet({
       onClose={onClose}
       footer={
         !loading && data.verses.length ? (
-          <View style={{ borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 8, gap: 6 }}>
-            <View style={styles.row}>
-              <Text style={{ fontFamily: fonts.body, fontSize: 11, color: colors.muted, flex: 1 }}>
-                {notice || bible.versions.find((v) => v.id === language)?.name}
-              </Text>
-              <IconButton
-                name="ellipsis-horizontal"
-                label="Passage actions"
-                onPress={() => setMenu(!menu)}
-              />
+          <View style={{ gap: 12, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {actions.slice(0, 3).map((action) => (
+                <Pressable
+                  key={action.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.label}
+                  onPress={action.run}
+                  style={{
+                    flex: 1,
+                    minHeight: 48,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <Icon name={action.icon} size={20} />
+                  <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.ink }}>
+                    {action.label}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
-            {menu ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-                {actions.map((action) => (
-                  <Pressable
-                    key={action.label}
-                    accessibilityRole="button"
-                    accessibilityLabel={action.label}
-                    onPress={action.run}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {actions.slice(3).map((action) => (
+                <Pressable
+                  key={action.label}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.label}
+                  onPress={action.run}
+                  style={{
+                    flex: 1,
+                    minHeight: 46,
+                    borderRadius: 12,
+                    backgroundColor: action.icon === 'create-outline' ? colors.ink : colors.soft,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    paddingHorizontal: 10,
+                  }}
+                >
+                  <Icon
+                    name={action.icon}
+                    color={action.icon === 'create-outline' ? '#fff' : colors.ink}
+                    size={18}
+                  />
+                  <Text
                     style={{
-                      width: '49%',
-                      minHeight: 44,
-                      paddingHorizontal: 8,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 8,
+                      fontFamily: fonts.medium,
+                      fontSize: 12,
+                      color: action.icon === 'create-outline' ? '#fff' : colors.ink,
+                      flexShrink: 1,
                     }}
                   >
-                    <Icon name={action.icon} size={18} />
-                    <Text
-                      style={{
-                        fontFamily: fonts.medium,
-                        fontSize: 12,
-                        color: colors.ink,
-                        flexShrink: 1,
-                      }}
-                    >
-                      {action.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
+                    {action.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            {notice ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                style={{ fontFamily: fonts.body, fontSize: 11, color: colors.green }}
+              >
+                {notice}
+              </Text>
             ) : null}
           </View>
         ) : null
@@ -245,25 +267,39 @@ export function ScriptureSheet({
         <Text style={styles.error}>{error}</Text>
       ) : data.verses.length ? (
         <>
-          <View style={{ gap: 12 }}>
-            {data.verses.map((verse) => (
-              <Text
-                key={verse.verse}
-                selectable
-                style={{
-                  fontFamily: fonts.serif,
-                  fontSize,
-                  lineHeight: fontSize * 1.6,
-                  color: colors.ink,
-                }}
-              >
-                <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.muted }}>
-                  {verse.verse}{' '}
+          {compactPreview ? (
+            <Text
+              numberOfLines={4}
+              style={{
+                fontFamily: fonts.serif,
+                fontSize: Math.min(fontSize, 19),
+                lineHeight: Math.min(fontSize, 19) * 1.55,
+                color: colors.ink,
+              }}
+            >
+              {data.verses.map((verse) => `${verse.verse} ${verse.text}`).join(' ')}
+            </Text>
+          ) : (
+            <View style={{ gap: 8 }}>
+              {data.verses.map((verse) => (
+                <Text
+                  key={verse.verse}
+                  selectable
+                  style={{
+                    fontFamily: fonts.serif,
+                    fontSize,
+                    lineHeight: fontSize * 1.55,
+                    color: colors.ink,
+                  }}
+                >
+                  <Text style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.muted }}>
+                    {verse.verse}{' '}
+                  </Text>
+                  {verse.text}
                 </Text>
-                {verse.text}
-              </Text>
-            ))}
-          </View>
+              ))}
+            </View>
+          )}
           {choosingNote ? (
             <View style={{ gap: 8 }}>
               <Button secondary onPress={() => void addToNote()} icon="add">

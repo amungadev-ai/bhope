@@ -20,6 +20,7 @@ import {
 } from '../lib/storage';
 import {
   Body,
+  Button,
   fonts,
   Icon,
   IconButton,
@@ -43,7 +44,7 @@ export default function BibleScreen() {
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Verse[]>([]);
-  const [picker, setPicker] = useState<'book' | 'chapter' | null>(null);
+  const [picker, setPicker] = useState<'book' | 'chapter' | 'range' | null>(null);
   const [bookQuery, setBookQuery] = useState('');
   const [loadedKey, setLoadedKey] = useState('');
   const key = `${language}:${bookId}:${chapter}`;
@@ -56,6 +57,10 @@ export default function BibleScreen() {
   const reader = route.name === 'BibleReader';
   const sw = appLanguage === 'sw';
   const [options, setOptions] = useState(false);
+  const [range, setRange] = useState<{ start: number; end: number } | null>(null);
+  const [rangeStart, setRangeStart] = useState('');
+  const [rangeEnd, setRangeEnd] = useState('');
+  const [rangeError, setRangeError] = useState('');
   useFocusEffect(
     useCallback(() => {
       if (params.book) {
@@ -65,6 +70,11 @@ export default function BibleScreen() {
           setChapter(Number(params.chapter) || 1);
           setHighlight(Number(params.verse) || undefined);
           setHighlightEnd(Number(params.verseEnd) || Number(params.verse) || undefined);
+          setRange(
+            Number(params.verseEnd) > Number(params.verse)
+              ? { start: Number(params.verse), end: Number(params.verseEnd) }
+              : null,
+          );
         }
       }
     }, [params.book, params.chapter, params.verse, params.verseEnd]),
@@ -146,6 +156,7 @@ export default function BibleScreen() {
       setChapter(chapters[index]);
       setHighlight(undefined);
       setHighlightEnd(undefined);
+      setRange(null);
       return;
     }
     const book = available[available.indexOf(bookId) + direction];
@@ -155,29 +166,96 @@ export default function BibleScreen() {
       setChapter(direction > 0 ? nextChapters[0] : nextChapters[nextChapters.length - 1]);
       setHighlight(undefined);
       setHighlightEnd(undefined);
+      setRange(null);
     }
   }
   const book = books.find((item) => item.id === bookId)!;
+  const displayedVerses = range
+    ? verses.filter((verse) => verse.verse >= range.start && verse.verse <= range.end)
+    : verses;
+  function chooseRange() {
+    setRangeStart(String(range?.start ?? highlight ?? verses[0]?.verse ?? 1));
+    setRangeEnd(String(range?.end ?? highlightEnd ?? verses.at(-1)?.verse ?? 1));
+    setRangeError('');
+    setPicker('range');
+  }
+  function applyRange() {
+    const start = Number(rangeStart),
+      end = Number(rangeEnd || rangeStart);
+    if (
+      !/^\d+$/.test(rangeStart) ||
+      (rangeEnd && !/^\d+$/.test(rangeEnd)) ||
+      start < 1 ||
+      end < start ||
+      !verses.some((v) => v.verse === start) ||
+      !verses.some((v) => v.verse === end)
+    ) {
+      setRangeError(
+        sw
+          ? 'Chagua mwanzo na mwisho unaopatikana katika sura hii.'
+          : 'Choose a valid start and end verse from this chapter.',
+      );
+      return;
+    }
+    setRange({ start, end });
+    setHighlight(start);
+    setHighlightEnd(end);
+    setQuery('');
+    setPicker(null);
+  }
   const header = (
     <View
       style={{
         backgroundColor: colors.background,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 14,
         borderBottomWidth: 1,
         borderBottomColor: colors.line,
-        paddingHorizontal: 16,
-        paddingBottom: 10,
-        gap: 6,
+        gap: 12,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         {reader ? <IconButton name="arrow-back" label="Return to note" onPress={goBack} /> : null}
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={{ fontFamily: fonts.serif, fontSize: reader ? 23 : 27, color: colors.ink }}>
+            {sw ? 'Biblia yako.' : 'Your Bible.'}
+          </Text>
+          <Text
+            numberOfLines={1}
+            style={{ fontFamily: fonts.body, fontSize: 10, color: colors.muted }}
+          >
+            {bible.versions.find((v) => v.id === language)?.name}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Bible text size"
+          onPress={() => setOptions(true)}
+          style={{ minWidth: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Text style={{ fontFamily: fonts.serif, fontSize: 19, color: colors.ink }}>Aa</Text>
+        </Pressable>
+        <LanguageSwitch bibleOnly />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Choose Bible book"
           onPress={() => setPicker('book')}
-          style={[styles.chip, { flex: 1, justifyContent: 'space-between', minHeight: 42 }]}
+          style={[
+            styles.chip,
+            {
+              flex: 1.5,
+              minHeight: 43,
+              justifyContent: 'space-between',
+              backgroundColor: colors.paper,
+              borderWidth: 1,
+              borderColor: colors.line,
+            },
+          ]}
         >
-          <Text numberOfLines={1} style={[styles.chipText, { fontSize: 15, flexShrink: 1 }]}>
+          <Text numberOfLines={1} style={[styles.chipText, { flexShrink: 1, fontSize: 14 }]}>
             {book[language]}
           </Text>
           <Icon name="chevron-down" size={13} />
@@ -186,56 +264,69 @@ export default function BibleScreen() {
           accessibilityRole="button"
           accessibilityLabel="Choose chapter"
           onPress={() => setPicker('chapter')}
-          style={[styles.chip, { minHeight: 42 }]}
+          style={[
+            styles.chip,
+            {
+              minHeight: 43,
+              justifyContent: 'space-between',
+              backgroundColor: colors.paper,
+              borderWidth: 1,
+              borderColor: colors.line,
+            },
+          ]}
         >
-          <Text style={styles.chipText}>{chapter}</Text>
-          <Icon name="chevron-down" size={12} />
+          <Text style={[styles.chipText, { fontSize: 13 }]}>{chapter}</Text>
+          <Icon name="chevron-down" size={13} />
         </Pressable>
-        <LanguageSwitch bibleOnly />
-        <IconButton
-          name="ellipsis-vertical"
-          label={highlight ? 'Verse options' : 'Bible options'}
-          onPress={() =>
-            highlight
-              ? setActions({
-                  bookId,
-                  chapter,
-                  verseStart: highlight,
-                  verseEnd: highlightEnd ?? highlight,
-                })
-              : setOptions(true)
-          }
-        />
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Input
-          accessibilityLabel="Search Bible"
-          placeholder={sw ? 'Rejeo au neno · Yohana 1:1–10' : 'Reference or word · John 1:1–10'}
-          value={query}
-          onChangeText={setQuery}
-          style={{ flex: 1, minHeight: 38, paddingVertical: 7, fontSize: 13 }}
-        />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Bible version information"
-          onPress={() => setOptions(true)}
-          style={{ maxWidth: 70 }}
+          accessibilityLabel="Choose verse range"
+          onPress={chooseRange}
+          style={[
+            styles.chip,
+            {
+              flex: 1,
+              minHeight: 43,
+              justifyContent: 'space-between',
+              backgroundColor: colors.paper,
+              borderWidth: 1,
+              borderColor: colors.line,
+            },
+          ]}
         >
-          <Text
-            numberOfLines={2}
-            style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.muted }}
-          >
-            {bible.versions
-              .find((v) => v.id === language)
-              ?.name.replace(/development sample|original paraphrases/gi, '')
-              .trim()}
+          <Text numberOfLines={1} style={[styles.chipText, { flexShrink: 1 }]}>
+            {range
+              ? `${range.start}${range.end !== range.start ? `–${range.end}` : ''}`
+              : sw
+                ? 'Mistari yote'
+                : 'All verses'}
           </Text>
+          <Icon name="chevron-down" size={13} />
         </Pressable>
       </View>
+      <Input
+        accessibilityLabel="Search Bible"
+        placeholder={
+          sw ? 'Tafuta neno au rejeo · Yohana 1:1–10' : 'Search a word or passage · John 1:1–10'
+        }
+        value={query}
+        onChangeText={setQuery}
+        style={{
+          minHeight: 42,
+          fontSize: 13,
+          paddingVertical: 9,
+          backgroundColor: colors.soft,
+          borderWidth: 0,
+        }}
+      />
     </View>
   );
   return (
-    <Screen safeTop header={header}>
+    <Screen
+      safeTop
+      header={header}
+      contentStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 16 }}
+    >
       {query.trim().length >= 2 ? (
         <View style={{ gap: 14 }}>
           <View style={styles.row}>
@@ -255,7 +346,13 @@ export default function BibleScreen() {
                 setBookId(verse.bookId);
                 setChapter(verse.chapter);
                 setHighlight(verse.verse);
-                setHighlightEnd(extractReferences(query)[0]?.verseEnd ?? verse.verse);
+                const found = extractReferences(query)[0];
+                setHighlightEnd(found?.verseEnd ?? verse.verse);
+                setRange(
+                  found?.verseStart && found.verseEnd && found.verseEnd > found.verseStart
+                    ? { start: found.verseStart, end: found.verseEnd }
+                    : null,
+                );
                 setQuery('');
               }}
             >
@@ -270,8 +367,8 @@ export default function BibleScreen() {
           {loading ? (
             <ActivityIndicator color={colors.ink} />
           ) : (
-            <View style={{ gap: 8 }}>
-              {verses.map((verse) => {
+            <View style={{ gap: 2 }}>
+              {displayedVerses.map((verse) => {
                 const selected = saved.has(`${language}:${bookId}:${chapter}:${verse.verse}`);
                 return (
                   <Pressable
@@ -286,14 +383,15 @@ export default function BibleScreen() {
                       setActions({
                         bookId,
                         chapter,
-                        verseStart: verse.verse,
-                        verseEnd: verse.verse,
+                        verseStart: range?.start ?? verse.verse,
+                        verseEnd: range?.end ?? verse.verse,
                       })
                     }
                     delayLongPress={450}
                     style={{
-                      padding: 12,
-                      marginHorizontal: -12,
+                      paddingHorizontal: 4,
+                      paddingVertical: 5,
+                      marginHorizontal: -4,
                       borderRadius: 12,
                       backgroundColor: selected
                         ? colors.soft
@@ -303,16 +401,16 @@ export default function BibleScreen() {
                           ? colors.selection
                           : 'transparent',
                       flexDirection: 'row',
-                      gap: 12,
+                      gap: 8,
                     }}
                   >
                     <Text
                       style={{
                         fontFamily: fonts.bold,
                         fontSize: 10,
-                        paddingTop: 8,
+                        paddingTop: 6,
                         color: colors.muted,
-                        width: 17,
+                        width: 16,
                       }}
                     >
                       {verse.verse}
@@ -323,7 +421,7 @@ export default function BibleScreen() {
                         fontFamily: fonts.serif,
                         color: colors.ink,
                         fontSize,
-                        lineHeight: fontSize * 1.8,
+                        lineHeight: fontSize * 1.55,
                         flex: 1,
                       }}
                     >
@@ -339,6 +437,21 @@ export default function BibleScreen() {
               })}
             </View>
           )}
+          {range ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setRange(null);
+                setHighlight(undefined);
+                setHighlightEnd(undefined);
+              }}
+              style={{ paddingVertical: 8 }}
+            >
+              <Text style={{ fontFamily: fonts.medium, color: colors.green, fontSize: 13 }}>
+                {sw ? 'Soma sura nzima' : 'Read the whole chapter'}
+              </Text>
+            </Pressable>
+          ) : null}
           <View style={styles.row}>
             <IconButton
               name="arrow-back"
@@ -370,10 +483,9 @@ export default function BibleScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Sheet
         visible={options}
-        title={sw ? 'Chaguzi za kusoma' : 'Reading options'}
+        title={sw ? 'Ukubwa wa maandishi' : 'Text size'}
         onClose={() => setOptions(false)}
       >
-        <Body>{bible.versions.find((v) => v.id === language)?.name}</Body>
         <View style={styles.row}>
           <Body>{sw ? 'Ukubwa wa maandishi' : 'Text size'}</Body>
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -393,11 +505,11 @@ export default function BibleScreen() {
       </Sheet>
       <ScriptureSheet
         reference={actions}
-        showActionsOnOpen
         version={language}
         onClose={() => setActions(null)}
         sourceNoteId={params.sourceNoteId}
         showOpenBible={false}
+        compactPreview
         onBookmarkChange={() => {
           void listBookmarks().then((items) =>
             setSaved(
@@ -436,6 +548,7 @@ export default function BibleScreen() {
                 setPicker(null);
                 setHighlight(undefined);
                 setHighlightEnd(undefined);
+                setRange(null);
               }}
               style={[styles.row, { paddingVertical: 9 }]}
             >
@@ -457,6 +570,7 @@ export default function BibleScreen() {
                 setPicker(null);
                 setHighlight(undefined);
                 setHighlightEnd(undefined);
+                setRange(null);
               }}
               style={[
                 styles.chip,
@@ -473,6 +587,48 @@ export default function BibleScreen() {
             </Pressable>
           ))}
         </View>
+      </Sheet>
+      <Sheet
+        visible={picker === 'range'}
+        title={sw ? 'Chagua mistari' : 'Choose verse range'}
+        onClose={() => setPicker(null)}
+      >
+        <Body>
+          {book[language]} {chapter}
+        </Body>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flex: 1, gap: 8 }}>
+            <Label>{sw ? 'MWANZO' : 'FROM VERSE'}</Label>
+            <Input
+              accessibilityLabel="From verse"
+              value={rangeStart}
+              onChangeText={setRangeStart}
+              keyboardType="number-pad"
+            />
+          </View>
+          <View style={{ flex: 1, gap: 8 }}>
+            <Label>{sw ? 'MWISHO' : 'TO VERSE'}</Label>
+            <Input
+              accessibilityLabel="To verse"
+              value={rangeEnd}
+              onChangeText={setRangeEnd}
+              keyboardType="number-pad"
+            />
+          </View>
+        </View>
+        {rangeError ? <Text style={styles.error}>{rangeError}</Text> : null}
+        <Button onPress={applyRange}>{sw ? 'Soma mistari hii' : 'Read this passage'}</Button>
+        <Button
+          secondary
+          onPress={() => {
+            setRange(null);
+            setPicker(null);
+            setHighlight(undefined);
+            setHighlightEnd(undefined);
+          }}
+        >
+          {sw ? 'Sura nzima' : 'Read whole chapter'}
+        </Button>
       </Sheet>
     </Screen>
   );

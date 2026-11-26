@@ -1,11 +1,22 @@
 import { useCallback, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Share, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { navigate, openNote } from '../navigation/actions';
 import { extractReferences, type Note } from '@bhope/shared';
-import { listNotes } from '../lib/storage';
+import { deleteNote, getNote, listNotes, saveNote } from '../lib/storage';
 import { useApp } from '../lib/context';
-import { Button, Empty, fonts, Icon, Input, Label, Screen, useUi } from '../components/ui';
+import {
+  Body,
+  Button,
+  Empty,
+  fonts,
+  Icon,
+  Input,
+  Label,
+  Screen,
+  Sheet,
+  useUi,
+} from '../components/ui';
 export default function NotesScreen() {
   const { colors, styles } = useUi();
   const { language } = useApp();
@@ -14,6 +25,53 @@ export default function NotesScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'sermon' | 'reflection'>('all');
   const [error, setError] = useState('');
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
+  const [noteAction, setNoteAction] = useState<'menu' | 'rename' | 'delete'>('menu');
+  const [renamedTitle, setRenamedTitle] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [busy, setBusy] = useState(false);
+  function showActions(note: Note) {
+    setSelectedNote(note);
+    setNoteAction('menu');
+    setRenamedTitle(note.title);
+    setActionError('');
+  }
+  async function changeNote(action: 'rename' | 'delete') {
+    if (!selectedNote || busy) return;
+    setBusy(true);
+    setActionError('');
+    try {
+      if (action === 'delete') await deleteNote(selectedNote.id);
+      else {
+        const current = await getNote(selectedNote.id);
+        if (!current) throw new Error('This note is no longer available.');
+        if (!renamedTitle.trim()) throw new Error('Enter a title for this note.');
+        await saveNote({
+          ...current,
+          title: renamedTitle.trim(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      setNotes(await listNotes());
+      setSelectedNote(null);
+    } catch (failure) {
+      setActionError(
+        failure instanceof Error ? failure.message : 'This note could not be updated.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function shareNote(note: Note) {
+    try {
+      await Share.share({
+        title: note.title || 'Beacon of Hope note',
+        message: `${note.title}\n${[note.preacher, note.church, note.sermonDate].filter(Boolean).join(' · ')}\n\n${note.body}`,
+      });
+    } catch {
+      setActionError('Sharing is unavailable on this device.');
+    }
+  }
   useFocusEffect(
     useCallback(() => {
       let active = true;
@@ -101,6 +159,20 @@ export default function NotesScreen() {
                 key={note.id}
                 accessibilityRole="button"
                 onPress={() => navigate('NoteEditor', { id: note.id })}
+                onLongPress={() => showActions(note)}
+                delayLongPress={450}
+                accessibilityLabel={note.title || (sw ? 'Dokezo bila kichwa' : 'Untitled note')}
+                accessibilityHint={
+                  sw
+                    ? 'Shikilia kwa kubadili jina, kushiriki au kufuta.'
+                    : 'Hold to rename, share, or delete.'
+                }
+                accessibilityActions={[
+                  { name: 'longpress', label: sw ? 'Chaguzi za dokezo' : 'Note actions' },
+                ]}
+                onAccessibilityAction={(event) => {
+                  if (event.nativeEvent.actionName === 'longpress') showActions(note);
+                }}
                 style={styles.card}
               >
                 <View style={styles.row}>
@@ -155,9 +227,101 @@ export default function NotesScreen() {
       >
         <Icon name="phone-portrait-outline" size={12} color={colors.muted} />
         <Text style={{ fontFamily: fonts.body, fontSize: 10, color: colors.muted }}>
-          {sw ? 'Yamehifadhiwa kwenye kifaa hiki' : 'Saved privately on this device'}
+          {sw ? 'Shikilia dokezo kwa chaguzi zaidi' : 'Hold a note for rename, share, or delete'}
         </Text>
       </View>
+      <Sheet
+        visible={Boolean(selectedNote)}
+        title={
+          noteAction === 'rename'
+            ? sw
+              ? 'Badili kichwa'
+              : 'Rename note'
+            : noteAction === 'delete'
+              ? sw
+                ? 'Futa dokezo?'
+                : 'Delete this note?'
+              : sw
+                ? 'Chaguzi za dokezo'
+                : 'Note actions'
+        }
+        onClose={() => {
+          if (!busy) setSelectedNote(null);
+        }}
+      >
+        {noteAction === 'menu' ? (
+          <>
+            <Text
+              numberOfLines={2}
+              style={{ fontFamily: fonts.serif, fontSize: 23, color: colors.ink }}
+            >
+              {selectedNote?.title || (sw ? 'Bila kichwa' : 'Untitled note')}
+            </Text>
+            {[
+              {
+                label: sw ? 'Badili kichwa' : 'Rename',
+                icon: 'create-outline',
+                run: () => setNoteAction('rename'),
+              },
+              {
+                label: sw ? 'Shiriki' : 'Share',
+                icon: 'share-outline',
+                run: () => {
+                  if (selectedNote) void shareNote(selectedNote);
+                },
+              },
+              {
+                label: sw ? 'Futa dokezo' : 'Delete',
+                icon: 'trash-outline',
+                run: () => setNoteAction('delete'),
+              },
+            ].map((action) => (
+              <Pressable
+                key={action.label}
+                accessibilityRole="button"
+                onPress={action.run}
+                style={[styles.row, { paddingVertical: 12 }]}
+              >
+                <Icon
+                  name={action.icon as import('../components/ui').IconName}
+                  size={20}
+                  color={action.icon === 'trash-outline' ? colors.danger : colors.ink}
+                />
+                <Text style={[styles.body, { flex: 1 }]}>{action.label}</Text>
+                <Icon name="chevron-forward" size={14} />
+              </Pressable>
+            ))}
+          </>
+        ) : noteAction === 'rename' ? (
+          <>
+            <Input
+              accessibilityLabel="Rename note title"
+              value={renamedTitle}
+              onChangeText={setRenamedTitle}
+              maxLength={200}
+              autoFocus
+            />
+            <Button busy={busy} onPress={() => void changeNote('rename')}>
+              {sw ? 'Hifadhi kichwa' : 'Save title'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Body>
+              {sw
+                ? 'Dokezo hili litaondolewa kwenye kifaa hiki.'
+                : 'This removes the note from this device. Share a copy first if you want to keep it.'}
+            </Body>
+            <Button busy={busy} onPress={() => void changeNote('delete')}>
+              {sw ? 'Futa dokezo' : 'Delete note'}
+            </Button>
+            <Button secondary onPress={() => setSelectedNote(null)}>
+              {sw ? 'Weka dokezo' : 'Keep my note'}
+            </Button>
+          </>
+        )}
+        {actionError ? <Text style={styles.error}>{actionError}</Text> : null}
+      </Sheet>
     </Screen>
   );
 }

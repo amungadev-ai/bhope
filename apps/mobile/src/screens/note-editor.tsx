@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -11,13 +11,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { goBack, navigate, openTab, openBible, type RootRoutes } from '../navigation/actions';
-import {
-  extractReferences,
-  formatReference,
-  type AiAccess,
-  type Note,
-  type Reference,
-} from '@bhope/shared';
+import { type AiAccess, type Note, type Reference } from '@bhope/shared';
 import { deleteNote, getNote, saveNote } from '../lib/storage';
 import { useApp } from '../lib/context';
 import { api } from '../lib/api';
@@ -32,7 +26,6 @@ import {
   Icon,
   IconButton,
   Input,
-  Label,
   Screen,
   Sheet,
   useUi,
@@ -46,11 +39,14 @@ export default function NoteScreen() {
   const [note, setNote] = useState<Note | null>(null);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const [passageActions, setPassageActions] = useState(false);
   const [passage, setPassage] = useState<Reference | null>(null);
-  const [dialog, setDialog] = useState<'ai' | 'delete' | 'menu' | 'details' | 'references' | null>(
-    null,
-  );
+  const [dialog, setDialogState] = useState<'ai' | 'delete' | 'menu' | 'details' | null>(null);
+  const [sheetDialog, setSheetDialog] = useState<NonNullable<typeof dialog>>('menu');
+  function setDialog(value: typeof dialog) {
+    if (value) setSheetDialog(value);
+    setDialogState(value);
+  }
+
   const [aiAccess, setAiAccess] = useState<AiAccess | null>(null);
   useEffect(() => {
     let active = true;
@@ -139,14 +135,6 @@ export default function NoteScreen() {
       if (timer.current) clearTimeout(timer.current);
     };
   }, [note, sw]);
-  const references = useMemo(
-    () => [
-      ...new Map(
-        extractReferences(note?.body ?? '').map((reference) => [reference.key, reference]),
-      ).values(),
-    ],
-    [note?.body],
-  );
   const update = (changes: Partial<Note>) =>
     setNote((old) => {
       if (!old) return old;
@@ -204,13 +192,6 @@ export default function NoteScreen() {
         {error ? <Body>{error}</Body> : <ActivityIndicator color={colors.ink} />}
       </Screen>
     );
-  function openCompanionBible() {
-    void (async () => {
-      if (timer.current) clearTimeout(timer.current);
-      if (current.current) await enqueue(current.current);
-      openBible(references[0] || { bookId: 19, chapter: 23 }, note!.id);
-    })().catch(() => setError('Save this note before opening the Bible.'));
-  }
   function showMenu() {
     Keyboard.dismiss();
     setDialog('menu');
@@ -218,38 +199,32 @@ export default function NoteScreen() {
   const header = (
     <View
       style={{
-        borderBottomWidth: 1,
-        borderBottomColor: colors.line,
-        paddingHorizontal: 12,
-        paddingBottom: 6,
+        paddingHorizontal: 16,
+        paddingTop: 5,
+        paddingBottom: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <IconButton name="arrow-back" label="Save and go back" onPress={() => void finish()} />
-        <Input
-          accessibilityLabel="Note title"
-          placeholder={sw ? 'Kichwa cha dokezo…' : 'Untitled note…'}
-          value={note.title}
-          onChangeText={(title) => update({ title })}
-          maxLength={200}
-          style={{
-            flex: 1,
-            minHeight: 48,
-            fontFamily: fonts.serif,
-            fontSize: 21,
-            borderWidth: 0,
-            backgroundColor: 'transparent',
-            paddingHorizontal: 0,
-          }}
-        />
-        <IconButton name="ellipsis-vertical" label="Note options" onPress={showMenu} />
-      </View>
-      <View style={{ flexDirection: 'row', paddingLeft: 54, alignItems: 'center', gap: 6 }}>
-        <Text style={{ fontFamily: fonts.body, color: colors.muted, fontSize: 10 }}>
-          {note.kind === 'sermon' ? (sw ? 'Mahubiri' : 'Sermon') : sw ? 'Tafakari' : 'Reflection'} ·{' '}
-          {status}
+      <IconButton name="arrow-back" label="Save and go back" onPress={() => void finish()} />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={{ fontFamily: fonts.serif, fontSize: 20, color: colors.ink }}>
+          {sw ? 'Daftari lako.' : 'Your notebook.'}
         </Text>
+        <Text style={{ fontFamily: fonts.body, fontSize: 10, color: colors.muted }}>{status}</Text>
       </View>
+      <IconButton
+        name="sparkles-outline"
+        label="Reflection tools"
+        onPress={() => {
+          Keyboard.dismiss();
+          setAiText('');
+          setAiError('');
+          setDialog('ai');
+        }}
+      />
+      <IconButton name="ellipsis-vertical" label="Note options" onPress={showMenu} />
     </View>
   );
   return (
@@ -259,51 +234,70 @@ export default function NoteScreen() {
         enabled={Platform.OS !== 'web'}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={{ flex: 1, paddingHorizontal: 22, paddingTop: 12 }}>
+        <View style={{ paddingHorizontal: 22, paddingBottom: 12, gap: 10 }}>
+          <Input
+            accessibilityLabel="Note title"
+            placeholder={sw ? 'Wazo lako linaanza hapa…' : 'Give this moment a title…'}
+            value={note.title}
+            onChangeText={(title) => update({ title })}
+            maxLength={200}
+            multiline
+            style={{
+              fontFamily: fonts.serif,
+              fontSize: 28,
+              lineHeight: 37,
+              maxHeight: 84,
+              minHeight: 44,
+              borderWidth: 0,
+              backgroundColor: 'transparent',
+              paddingHorizontal: 0,
+              paddingVertical: 0,
+            }}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Edit note details"
+            onPress={() => {
+              Keyboard.dismiss();
+              setDialog('details');
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 24 }}
+          >
+            <Icon
+              name={note.kind === 'sermon' ? 'mic-outline' : 'leaf-outline'}
+              size={13}
+              color={colors.muted}
+            />
+            <Text
+              numberOfLines={1}
+              style={{ flexShrink: 1, fontFamily: fonts.body, color: colors.muted, fontSize: 11 }}
+            >
+              {note.kind === 'sermon'
+                ? [sw ? 'Mahubiri' : 'Sermon', note.preacher, note.church]
+                    .filter(Boolean)
+                    .join(' · ')
+                : sw
+                  ? 'Tafakari binafsi'
+                  : 'Personal reflection'}
+            </Text>
+            <Icon name="chevron-down" size={12} color={colors.muted} />
+          </Pressable>
+          <EditorToolbar onCommand={(command) => editor.current?.command(command)} />
+        </View>
+        <View style={{ flex: 1, paddingHorizontal: 22 }}>
           <RichEditor
             key={note.id}
             ref={editor}
             initialHtml={note.html}
             initialText={note.body}
             placeholder={
-              sw ? 'Andika wazo, rejeo, au sala…' : 'Capture a thought, a verse, a prayer…'
+              sw ? 'Andika unachojifunza, swali, au sala…' : 'Capture a thought, a verse, a prayer…'
             }
             onChange={(html, body) => update({ html, body })}
             onSelection={setSelectedText}
-            onReference={(reference, intent) => {
+            onReference={(reference) => {
               Keyboard.dismiss();
-              setPassageActions(intent === 'actions');
               setPassage(reference);
-            }}
-          />
-        </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderTopWidth: 1,
-            borderTopColor: colors.line,
-            paddingHorizontal: 16,
-            minHeight: 46,
-          }}
-        >
-          <Text style={{ flex: 1, fontFamily: fonts.body, color: colors.muted, fontSize: 10 }}>
-            {note.body.trim() ? note.body.trim().split(/\s+/).length : 0} {sw ? 'maneno' : 'words'}{' '}
-            · {references.length} {sw ? 'marejeo' : 'references'}
-          </Text>
-          <IconButton
-            name="book-outline"
-            label="Open Bible beside this note"
-            onPress={openCompanionBible}
-          />
-          <IconButton
-            name="sparkles-outline"
-            label="Reflection tools"
-            onPress={() => {
-              Keyboard.dismiss();
-              setAiText('');
-              setAiError('');
-              setDialog('ai');
             }}
           />
         </View>
@@ -312,50 +306,34 @@ export default function NoteScreen() {
       <Sheet
         visible={dialog !== null}
         title={
-          dialog === 'menu'
+          sheetDialog === 'menu'
             ? sw
               ? 'Chaguzi za dokezo'
               : 'Note options'
-            : dialog === 'details'
+            : sheetDialog === 'details'
               ? sw
                 ? 'Maelezo ya dokezo'
                 : 'Note details'
-              : dialog === 'references'
+              : sheetDialog === 'delete'
                 ? sw
-                  ? 'Marejeo katika dokezo'
-                  : 'References in this note'
-                : dialog === 'delete'
-                  ? sw
-                    ? 'Futa dokezo hili?'
-                    : 'Delete this note?'
-                  : sw
-                    ? 'Tafakari zaidi'
-                    : 'A moment to reflect'
+                  ? 'Futa dokezo hili?'
+                  : 'Delete this note?'
+                : sw
+                  ? 'Tafakari zaidi'
+                  : 'A moment to reflect'
         }
         onClose={() => {
           if (dialog !== 'ai' || !busy) setDialog(null);
         }}
       >
-        {dialog === 'menu' ? (
+        {sheetDialog === 'menu' ? (
           <>
-            <Label>{sw ? 'MPANGILIO WA MAANDISHI' : 'FORMAT YOUR WORDS'}</Label>
-            <EditorToolbar
-              onCommand={(command) => {
-                setDialog(null);
-                editor.current?.command(command);
-              }}
-            />
             <View style={{ gap: 2 }}>
               {[
                 {
                   label: sw ? 'Maelezo ya dokezo' : 'Note details',
                   icon: 'options-outline',
                   run: () => setDialog('details'),
-                },
-                {
-                  label: `${sw ? 'Marejeo katika dokezo' : 'References in this note'} (${references.length})`,
-                  icon: 'book-outline',
-                  run: () => setDialog('references'),
                 },
                 {
                   label: sw ? 'Shiriki dokezo' : 'Export note',
@@ -388,7 +366,7 @@ export default function NoteScreen() {
             </View>
           </>
         ) : null}
-        {dialog === 'details' ? (
+        {sheetDialog === 'details' ? (
           <>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {(['reflection', 'sermon'] as const).map((value) => (
@@ -440,33 +418,7 @@ export default function NoteScreen() {
             )}
           </>
         ) : null}
-        {dialog === 'references' ? (
-          <>
-            {references.length ? (
-              references.map((reference) => (
-                <Pressable
-                  key={reference.key}
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setDialog(null);
-                    setPassageActions(false);
-                    setPassage(reference);
-                  }}
-                  style={{ paddingVertical: 12 }}
-                >
-                  <Body>{formatReference(reference, language)}</Body>
-                </Pressable>
-              ))
-            ) : (
-              <Body muted>
-                {sw
-                  ? 'Andika rejeo kama Yohana 3:16.'
-                  : 'Type a reference such as John 3:16. It becomes a blue link as you write.'}
-              </Body>
-            )}
-          </>
-        ) : null}
-        {dialog === 'delete' ? (
+        {sheetDialog === 'delete' ? (
           <>
             <Body>
               This removes the note from this device. Export a copy first if you want to keep it.
@@ -479,7 +431,7 @@ export default function NoteScreen() {
             </Button>
           </>
         ) : null}
-        {dialog === 'ai' ? (
+        {sheetDialog === 'ai' ? (
           <>
             <Body>
               {selectedText.trim() ? 'Your selected words' : 'This note’s words'} will be sent to
@@ -576,7 +528,6 @@ export default function NoteScreen() {
 
       <ScriptureSheet
         reference={passage}
-        showActionsOnOpen={passageActions}
         onClose={() => setPassage(null)}
         onInsert={(text) => editor.current?.appendText(text)}
         sourceNoteId={note.id}

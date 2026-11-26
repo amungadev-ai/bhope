@@ -126,6 +126,8 @@ Save the file, quoting passwords so special characters are preserved. Use **Run 
 
 After the account is created, remove all four `CREATE_USER_*` settings from `.env` (or the panel) and save. Restart the application, then sign into `/console/` with that email and password. The temporary setup settings are not needed for normal operation. There is no public account-bootstrap endpoint.
 
+If the Node manager cannot run the account tool but the API is healthy, create a normal account from the mobile app. In phpMyAdmin, select the application's `users` table, find your own email, click **Edit**, change only `role` to `admin`, and save. Then sign into `/console/` using that account. The API generates the password hash during registration; no manual password insert is needed. This one-time bootstrap requires database-owner access. Future role changes belong in the administrator's **People** screen.
+
 If the panel does not provide **Run JS Script**, ask the hosting provider to enable that capability, provide an account Terminal, or confirm SSH access. A connection timeout or refusal before authentication requires checking the SSH hostname/IP, port, firewall/IP restrictions, and account access. Creating or authorizing a new key does not make a closed or unreachable port accessible. DirectAdmin's SSH-key screen and its separate Login Keys feature are not a browser terminal.
 
 The schema contains users, hashed sessions, devotionals, private note records, daily AI usage counters, role-change audit events, curated inspirations, donations, lifetime AI usage, and access-adjustment audit records. Migrations run in filename order; the new tables do not replace existing notes or accounts. Two original sample devotionals are seeded only when the library is empty.
@@ -137,6 +139,18 @@ On startup, `app.cjs` records `BOOT`, module-loading progress, and fatal error c
 For an existing deployment with an opaque 503, upload only the current **`apps/api/app.cjs`** from your checkout to **`hope_api/app.cjs`**; no rebuild or dependency installation is needed for that file. Restart the Node.js application, request `/api/v1/health` to trigger startup, and read `startup.log` in File Manager. Share only the latest diagnostic lines. If no log appears, check the manager's configured Passenger/error log; the startup entry may not have run, or the process may lack write permission. CloudLinux's Node.js page can also expose a Passenger log path, depending on the host configuration.
 
 Common codes include `ERR_MODULE_NOT_FOUND` (an uploaded file or installed dependency is unavailable), `ER_ACCESS_DENIED_ERROR` (database authentication), `ER_DBACCESS_DENIED_ERROR` (database privileges), `ER_BAD_DB_ERROR` (database name), `ER_NO_SUCH_TABLE` (schema/table selection), and `ECONNREFUSED` (database host/port or listener refusal). Use the actual message and context to diagnose it. A generic web-server 503 alone does not identify which of these failed.
+
+### When the Node manager reports an application lock
+
+CloudLinux's [lock troubleshooting guide](https://cloudlinux.zendesk.com/hc/en-us/articles/360010988820-NodeJS-Selector-not-Working-with-an-Error-Can-t-acquire-lock-for-app) describes a process holding the app's `.lock`, often after a long-running npm script. This can block panel operations while the API still serves requests. Do not run `start` through **Run JS Script**; Passenger starts the web application.
+
+With SSH unavailable, ask the host to inspect the lock holder. Suggested support request:
+
+> Please clear the Node.js Selector operation lock for account `jobready`, application `domains/bhope-api.billucsolutions.co.ke/hope_api`. Identify and stop only the stuck Selector/npm operation holding this application's lock, then restore panel controls. Preserve the deployment, private `.env`, database, and managed dependency link. Please confirm the process that held the lock.
+
+Saving `hope_api/tmp/restart.txt` restarts Passenger; it does not release a separate Selector operation lock. Do not delete an active lock file or stop every Node process.
+
+### Verify the running service
 
 - `GET /api/v1/health` returns `{"status":"ok","service":"beacon-of-hope-api"}` after checking the database.
 - `/console/` opens the editorial studio.
@@ -153,7 +167,9 @@ Configure encrypted off-host database backups with a restore check and watch the
 
 ## 7. Connect the mobile app
 
-On your development computer set `apps/mobile/.env`:
+The app uses the hosted API below by default. A missing or blank mobile
+`EXPO_PUBLIC_API_URL` no longer disables account creation. To override an
+existing local API setting on your development computer, set `apps/mobile/.env`:
 
 ```dotenv
 EXPO_PUBLIC_API_URL=https://bhope-api.billucsolutions.co.ke/api/v1

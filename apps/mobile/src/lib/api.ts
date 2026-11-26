@@ -1,10 +1,7 @@
 import { getToken } from './session';
-export const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+const hostedApiUrl = 'https://bhope-api.billucsolutions.co.ke/api/v1';
+export const apiUrl = (process.env.EXPO_PUBLIC_API_URL?.trim() || hostedApiUrl).replace(/\/+$/, '');
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  if (!apiUrl)
-    throw new Error(
-      'This service is not available yet. Your Bible and notebook still work offline.',
-    );
   const token = await getToken();
   let response: Response;
   try {

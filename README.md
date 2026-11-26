@@ -76,7 +76,13 @@ Open **http://localhost:5173/console/** and sign in. An admin can promote regist
 
 ### Connect your phone to the API
 
-Create `apps/mobile/.env` using `apps/mobile/.env.example` as a guide:
+The mobile app connects to `https://bhope-api.billucsolutions.co.ke/api/v1`
+by default, even when `EXPO_PUBLIC_API_URL` is missing or blank. Registration
+and sign-in are available without creating a mobile `.env` file. Bible
+reading and local notes still work without an internet connection.
+
+To use a different API, create `apps/mobile/.env` using
+`apps/mobile/.env.example` as a guide. For a local development server:
 
 ```dotenv
 EXPO_PUBLIC_API_URL=http://YOUR_COMPUTER_LAN_IP:4000/api/v1

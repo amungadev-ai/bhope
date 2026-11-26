@@ -3,6 +3,8 @@ export function editorRuntime(config, extract) {
   const editor = document.getElementById('editor');
   let savedRange = null;
   let decorating = false;
+  let composing = false;
+  let pressOrigin = null;
   let timer;
   let pressTimer;
   let longPressed = false;
@@ -70,6 +72,11 @@ export function editorRuntime(config, extract) {
           continue;
         }
         if (!allowed.has(child.tagName)) {
+          visit(child);
+          child.replaceWith(...child.childNodes);
+          continue;
+        }
+        if (child.tagName === 'SPAN') {
           visit(child);
           child.replaceWith(...child.childNodes);
           continue;
@@ -151,7 +158,7 @@ export function editorRuntime(config, extract) {
     }
   }
   function highlight() {
-    if (decorating) return;
+    if (decorating || composing) return;
     decorating = true;
     const offsets = offsetSelection();
     for (const span of editor.querySelectorAll('[data-scripture]'))
@@ -172,8 +179,7 @@ export function editorRuntime(config, extract) {
         span.dataset.scripture = JSON.stringify(ref);
         span.className = 'scripture';
         span.textContent = ref.raw;
-        span.setAttribute('role', 'link');
-        span.setAttribute('tabindex', '0');
+        span.setAttribute('title', 'Tap to edit; hold to read this passage.');
         fragment.appendChild(span);
         cursor = ref.end;
       }
@@ -244,12 +250,23 @@ export function editorRuntime(config, extract) {
     const reference = extract(target.textContent)[0];
     return reference ?? null;
   }
-  editor.addEventListener('input', () => {
-    if (decorating) return;
+  editor.addEventListener('compositionstart', () => {
+    composing = true;
+    clearTimeout(timer);
+  });
+  editor.addEventListener('compositionend', () => {
+    composing = false;
     remember();
     emit();
     clearTimeout(timer);
     timer = setTimeout(highlight, 180);
+  });
+  editor.addEventListener('input', (event) => {
+    if (decorating) return;
+    remember();
+    emit();
+    clearTimeout(timer);
+    if (!composing && !event.isComposing) timer = setTimeout(highlight, 180);
   });
   editor.addEventListener('change', (event) => {
     if (event.target.matches('input[type="checkbox"]')) {
@@ -263,24 +280,31 @@ export function editorRuntime(config, extract) {
     const text = event.clipboardData?.getData('text/plain') ?? '';
     document.execCommand('insertText', false, text);
   });
-  editor.addEventListener('click', (event) => {
-    const reference = referenceFrom(event);
-    if (reference && !longPressed) send({ type: 'reference', reference, intent: 'preview' });
-    longPressed = false;
-  });
+  const cancelPress = () => {
+    clearTimeout(pressTimer);
+    pressOrigin = null;
+  };
   editor.addEventListener('pointerdown', (event) => {
+    cancelPress();
     longPressed = false;
+    if (event.button !== undefined && event.button !== 0) return;
     const reference = referenceFrom(event, true);
-    if (reference)
+    if (reference) {
+      pressOrigin = { x: event.clientX, y: event.clientY };
       pressTimer = setTimeout(() => {
         longPressed = true;
+        remember();
         send({ type: 'reference', reference, intent: 'actions' });
       }, 550);
+    }
   });
-  const cancelPress = () => clearTimeout(pressTimer);
   editor.addEventListener('pointerup', cancelPress);
   editor.addEventListener('pointercancel', cancelPress);
-  editor.addEventListener('pointermove', cancelPress);
+  editor.addEventListener('pointermove', (event) => {
+    if (pressOrigin && Math.hypot(event.clientX - pressOrigin.x, event.clientY - pressOrigin.y) > 8)
+      cancelPress();
+  });
+  editor.addEventListener('scroll', cancelPress, true);
   editor.addEventListener('contextmenu', (event) => {
     const reference = referenceFrom(event, true);
     if (reference) {
@@ -291,9 +315,16 @@ export function editorRuntime(config, extract) {
     }
   });
   editor.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && event.target.matches?.('[data-scripture]')) {
-      event.preventDefault();
-      send({ type: 'reference', reference: referenceFrom(event), intent: 'preview' });
+    if (event.key === 'Enter' && event.altKey) {
+      const node = window.getSelection()?.anchorNode;
+      const target = node?.nodeType === 3 ? node.parentElement : node;
+      const reference = referenceFrom({ target }, true);
+      if (reference) {
+        event.preventDefault();
+        cancelPress();
+        remember();
+        send({ type: 'reference', reference, intent: 'actions' });
+      }
     }
   });
   document.addEventListener('selectionchange', () => {

@@ -18,6 +18,7 @@ import { api } from '../lib/api';
 import { ScriptureSheet } from '../components/scripture-sheet';
 import { RichEditor } from '../components/rich-editor';
 import { EditorToolbar } from '../components/editor-toolbar';
+import { DraggableAiAction } from '../components/draggable-ai-action';
 import type { RichEditorHandle } from '../components/rich-editor-types';
 import {
   Body,
@@ -64,6 +65,9 @@ export default function NoteScreen() {
   const [aiError, setAiError] = useState('');
   const [busy, setBusy] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [editorBounds, setEditorBounds] = useState({ width: 0, height: 0 });
+  const [draggingAi, setDraggingAi] = useState(false);
   const editor = useRef<RichEditorHandle>(null);
   const lastInsert = useRef('');
   useEffect(() => {
@@ -214,16 +218,6 @@ export default function NoteScreen() {
         </Text>
         <Text style={{ fontFamily: fonts.body, fontSize: 10, color: colors.muted }}>{status}</Text>
       </View>
-      <IconButton
-        name="sparkles-outline"
-        label="Reflection tools"
-        onPress={() => {
-          Keyboard.dismiss();
-          setAiText('');
-          setAiError('');
-          setDialog('ai');
-        }}
-      />
       <IconButton name="ellipsis-vertical" label="Note options" onPress={showMenu} />
     </View>
   );
@@ -282,24 +276,84 @@ export default function NoteScreen() {
             </Text>
             <Icon name="chevron-down" size={12} color={colors.muted} />
           </Pressable>
-          <EditorToolbar onCommand={(command) => editor.current?.command(command)} />
-        </View>
-        <View style={{ flex: 1, paddingHorizontal: 22 }}>
-          <RichEditor
-            key={note.id}
-            ref={editor}
-            initialHtml={note.html}
-            initialText={note.body}
-            placeholder={
-              sw ? 'Andika unachojifunza, swali, au sala…' : 'Capture a thought, a verse, a prayer…'
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              sidebarOpen ? 'Collapse formatting sidebar' : 'Open formatting sidebar'
             }
-            onChange={(html, body) => update({ html, body })}
-            onSelection={setSelectedText}
-            onReference={(reference) => {
-              Keyboard.dismiss();
-              setPassage(reference);
+            accessibilityState={{ expanded: sidebarOpen }}
+            aria-expanded={sidebarOpen}
+            onPress={() => setSidebarOpen(!sidebarOpen)}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              alignSelf: 'flex-start',
+              gap: 8,
+              paddingHorizontal: 12,
+              minHeight: 34,
+              borderRadius: 11,
+              backgroundColor: colors.soft,
             }}
-          />
+          >
+            <Icon name="options-outline" size={17} />
+            <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.ink }}>
+              {sw ? 'Mpangilio' : 'Format'}
+            </Text>
+            <Icon name={sidebarOpen ? 'chevron-back' : 'chevron-forward'} size={13} />
+          </Pressable>
+        </View>
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          {sidebarOpen ? (
+            <EditorToolbar onCommand={(command) => editor.current?.command(command)} />
+          ) : null}
+          <View
+            testID="note-writing-area"
+            onLayout={(event) => {
+              const { width, height } = event.nativeEvent.layout;
+              setEditorBounds((previous) =>
+                previous.width === width && previous.height === height
+                  ? previous
+                  : { width, height },
+              );
+            }}
+            style={{ flex: 1, minWidth: 0, position: 'relative' }}
+          >
+            <View style={{ flex: 1, paddingHorizontal: sidebarOpen ? 14 : 22 }}>
+              <RichEditor
+                key={note.id}
+                ref={editor}
+                initialHtml={note.html}
+                initialText={note.body}
+                placeholder={
+                  sw
+                    ? 'Andika unachojifunza, swali, au sala…'
+                    : 'Capture a thought, a verse, a prayer…'
+                }
+                onChange={(html, body) => update({ html, body })}
+                onSelection={setSelectedText}
+                onReference={(reference) => {
+                  Keyboard.dismiss();
+                  setPassage(reference);
+                }}
+              />
+            </View>
+            {draggingAi ? (
+              <View
+                testID="ai-drag-overlay"
+                style={{ position: 'absolute', inset: 0, zIndex: 2 }}
+              />
+            ) : null}
+            <DraggableAiAction
+              bounds={editorBounds}
+              onDraggingChange={setDraggingAi}
+              onPress={() => {
+                Keyboard.dismiss();
+                setAiText('');
+                setAiError('');
+                setDialog('ai');
+              }}
+            />
+          </View>
         </View>
         {error ? <Text style={[styles.error, { paddingHorizontal: 20 }]}>{error}</Text> : null}
       </KeyboardAvoidingView>

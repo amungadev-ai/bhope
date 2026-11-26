@@ -17,14 +17,15 @@ Connect the computer and phone to the same Wi-Fi, then scan the terminal QR code
 
 After the first clone, get updates with `git pull` followed by `npm ci`. Use `npm start -- --clear` after changing Bible imports or environment settings. Development on a physical Android phone does not require Android Studio.
 
-## What works in version 0.2
+## What works in version 0.3
 
 - English/Swahili devotional screens, devotional details, reflection prompts, and locally saved reading completion.
-- Direct React Navigation 7: Today, Bible, Notebook, and Inspirations tabs, plus a drawer for account, saved verses, giving, history, and reading preferences.
+- Direct React Navigation 7 with five tabs: Today, Bible, Notebook, Inspiration, and More. The drawer is nested under More; Home also offers a shortcut. Fixed headers leave reading content scrollable underneath.
+- App language lives in Preferences. Bible language is independent and stays in the reader. Four persisted color themes: Evergreen, Ocean, Plum, and Warm Sand.
 - Offline Bible book/chapter selection, text/reference search, reading-size controls, and explicit bookmarks. Tap to focus a verse; long press for copy, share, save, or add-to-note actions.
-- Sermon and reflection notebooks with headings, paragraphs, bold, italic, underline, numbered/bullet lists, checkboxes, undo/redo, autosave, and share/export. Existing plain-text notes remain readable and editable.
-- Automatic English/Swahili Scripture references, including aliases (`John`, `jhon`, `joh`, `jhn`, `jon`, `jn`, `Yohana`) and spaced verse ranges such as `John 1: 1-10`. Blue references inside note text open passage actions. Bible reading can return a passage to the current note without losing its title or content. Detection works offline.
-- Optional DeepSeek summaries and reflection questions under the small reflection-tools icon. Sign-in and consent are requested at that point; suggestions are reviewed before insertion. Daily reading and local notes do not require an account.
+- Sermon and reflection notebooks with headings, paragraphs, bold, italic, underline, numbered/bullet lists, checkboxes, undo/redo, autosave, and share/export. The editor fills the available space and adapts to the keyboard. Formatting, sermon details, and the reference list are behind the top-right three-dot menu; Bible and reflection shortcuts stay visible. Existing notes remain editable.
+- Automatic English/Swahili Scripture references, including aliases (`John`, `jhon`, `joh`, `jhn`, `jon`, `jn`, `Yohana`) and spaced verse ranges such as `John 1: 1-10`. Blue references open a compact passage preview; a footer ellipsis reveals its actions. Bible reading can return a passage to the current note without losing its title or content. Detection works offline.
+- Optional DeepSeek summaries and reflection questions under the small reflection-tools icon. Sign-in and consent are requested at that point; suggestions are reviewed before insertion. Daily reading and local notes do not require an account. AI has five free uses once per reader account; failed provider responses restore the free credit. The continued-access plan is KES 150/month with a daily request limit. Store checkout is not configured and no recurring charges are started. See [AI access](docs/AI_ACCESS.md).
 - Separate editor/admin views in the web studio: bilingual drafts, live preview, submission for review, admin publication/scheduling, and admin role management.
 - Curated Inspirations with individual TikTok players, editor drafts/review and admin publication/scheduling. The feed starts empty until real videos are selected; the ministry profile link remains in the drawer.
 - Optional KES donations: M-Pesa STK prompts and hosted Paystack card checkout in a bottom sheet, account-linked donation history, and admin finance reports. Payment methods stay disabled until server credentials and public HTTPS callbacks are configured. No live payment has been tested. See [giving setup](docs/GIVING.md).
@@ -104,4 +105,4 @@ docs              Setup and architecture
 
 Daily devotionals, the Bible, and the notebook remain free. Paid extras are a later phase, with a separate purchase/entitlement design and store-billing review. Donations never unlock app content.
 
-This is a development version for Expo Go evaluation. Notes currently stay on the device; the API's protected note endpoints are prepared for a later synchronization UI. Live hosting/provider verification, password recovery/email verification, account deletion, push reminders, and production release builds remain later milestones. Export important notes before clearing app data or reinstalling Expo Go. See the [version 0.2 notes](docs/V0.2.md).
+This is a development version for Expo Go evaluation. Notes currently stay on the device; the API's protected note endpoints are prepared for a later synchronization UI. Live hosting/provider verification, password recovery/email verification, account deletion, push reminders, and production release builds remain later milestones. Export important notes before clearing app data or reinstalling Expo Go. See the [version 0.3 notes](docs/V0.3.md).

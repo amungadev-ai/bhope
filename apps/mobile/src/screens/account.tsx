@@ -1,19 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { goBack } from '../navigation/actions';
 import { api, apiUrl } from '../lib/api';
 import { clearToken, setToken } from '../lib/session';
-import {
-  Body,
-  Button,
-  colors,
-  IconButton,
-  Input,
-  Label,
-  Screen,
-  styles,
-  Title,
-} from '../components/ui';
+import { Body, Button, Input, Label, Screen, Title, useUi } from '../components/ui';
 import { useApp } from '../lib/context';
 interface User {
   id: string;
@@ -22,6 +11,7 @@ interface User {
   role: string;
 }
 export default function AccountScreen() {
+  const { colors, styles } = useUi();
   const { refreshUser } = useApp();
   const [user, setUser] = useState<User | null>(null);
   const [register, setRegister] = useState(false);
@@ -82,11 +72,6 @@ export default function AccountScreen() {
   }
   return (
     <Screen>
-      <View style={styles.row}>
-        <IconButton name="arrow-back" label="Back" onPress={() => goBack()} />
-        <Label>BEACON OF HOPE</Label>
-        <View style={{ width: 44 }} />
-      </View>
       <Title>
         {user
           ? `Welcome, ${user.name.split(' ')[0]}.`

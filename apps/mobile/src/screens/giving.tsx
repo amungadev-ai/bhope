@@ -6,21 +6,19 @@ import type { Donation } from '@bhope/shared';
 import { api, apiUrl } from '../lib/api';
 import { getGivingRecovery, setGivingRecovery, clearGivingRecovery } from '../lib/giving-recovery';
 import { useApp } from '../lib/context';
-import { navigate, openDrawer } from '../navigation/actions';
+import { navigate } from '../navigation/actions';
 import {
   Body,
   Button,
-  colors,
   Empty,
   fonts,
   Icon,
-  IconButton,
   Input,
   Label,
   Screen,
   Sheet,
-  styles,
   Title,
+  useUi,
 } from '../components/ui';
 import { CardCheckout } from '../components/card-checkout';
 type Capabilities = { mpesa: boolean; card: boolean; minimum: number; maximum: number };
@@ -32,6 +30,7 @@ type StartedGift = {
 };
 const newToken = () => `${Crypto.randomUUID()}${Crypto.randomUUID()}`.replace(/-/g, '');
 export function Giving() {
+  const { colors, styles } = useUi();
   const { language, user } = useApp();
   const sw = language === 'sw';
   const [capabilities, setCapabilities] = useState<Capabilities>({
@@ -150,7 +149,6 @@ export function Giving() {
   const confirmed = gift?.donation.status === 'success';
   return (
     <Screen>
-      <IconButton name="menu-outline" label="Open menu" onPress={openDrawer} />
       <View style={{ gap: 10 }}>
         <Label>{sw ? 'WEMA UNAENDELEA' : 'A LITTLE KINDNESS GOES ON'}</Label>
         <Title>{sw ? 'Saidia mwanga\nuendelee.' : 'Help keep\nthe light shining.'}</Title>
@@ -380,6 +378,7 @@ export function Giving() {
   );
 }
 export function DonationHistory() {
+  const { colors, styles } = useUi();
   const { user, language } = useApp();
   const sw = language === 'sw';
   const [items, setItems] = useState<Donation[]>([]);
@@ -410,7 +409,6 @@ export function DonationHistory() {
   );
   return (
     <Screen>
-      <IconButton name="menu-outline" label="Open menu" onPress={openDrawer} />
       <View style={{ gap: 8 }}>
         <Label>{sw ? 'WEMA WAKO UNAHESABIWA' : 'A RECORD OF YOUR KINDNESS'}</Label>
         <Title>{sw ? 'Safari yako ya kutoa.' : 'Your giving journey.'}</Title>

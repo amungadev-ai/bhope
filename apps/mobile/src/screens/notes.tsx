@@ -1,25 +1,13 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { navigate, openNote, openDrawer } from '../navigation/actions';
+import { navigate, openNote } from '../navigation/actions';
 import { extractReferences, type Note } from '@bhope/shared';
 import { listNotes } from '../lib/storage';
 import { useApp } from '../lib/context';
-import {
-  Body,
-  Button,
-  colors,
-  Empty,
-  fonts,
-  Icon,
-  IconButton,
-  Input,
-  Label,
-  Screen,
-  styles,
-  Title,
-} from '../components/ui';
+import { Button, Empty, fonts, Icon, Input, Label, Screen, useUi } from '../components/ui';
 export default function NotesScreen() {
+  const { colors, styles } = useUi();
   const { language } = useApp();
   const sw = language === 'sw';
   const [notes, setNotes] = useState<Note[]>([]);
@@ -50,22 +38,6 @@ export default function NotesScreen() {
   );
   return (
     <Screen>
-      <View style={styles.row}>
-        <IconButton name="menu-outline" label="Open menu" onPress={openDrawer} />
-        <Label>{sw ? 'NAFASI YA MAWAZO YAKO' : 'A SPACE FOR YOUR THOUGHTS'}</Label>
-      </View>
-      <View style={styles.row}>
-        <View style={{ gap: 6 }}>
-          <Label>{sw ? 'KUMBUKA YANAYOKUJENGA' : 'HOLD ON TO WHAT MATTERS'}</Label>
-          <Title>{sw ? 'Daftari lako.' : 'Your notebook.'}</Title>
-        </View>
-        <IconButton name="add" label="Create a note" onPress={() => void openNote()} />
-      </View>
-      <Body muted>
-        {sw
-          ? 'Mawazo madogo. Masomo makubwa. Nafasi yako.'
-          : 'Quiet thoughts. Sunday lessons. A space for it all.'}
-      </Body>
       <Button icon="create-outline" onPress={() => void openNote('new', 'sermon')}>
         {sw ? 'Andika maelezo ya mahubiri' : 'Take sermon notes'}
       </Button>

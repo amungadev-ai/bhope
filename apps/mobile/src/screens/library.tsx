@@ -1,27 +1,17 @@
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { formatReference, type Reference } from '@bhope/shared';
+import { formatReference, type Reference, type Language } from '@bhope/shared';
 import { useApp } from '../lib/context';
 import { listBookmarks, type Bookmark } from '../lib/storage';
-import { openDrawer } from '../navigation/actions';
-import {
-  Body,
-  colors,
-  Empty,
-  fonts,
-  Icon,
-  IconButton,
-  Label,
-  Screen,
-  styles,
-  Title,
-} from '../components/ui';
+import { Body, Empty, fonts, Icon, Label, Screen, Title, useUi } from '../components/ui';
 import { ScriptureSheet } from '../components/scripture-sheet';
 export function SavedVerses() {
+  const { colors, styles } = useUi();
   const { language } = useApp();
   const sw = language === 'sw';
   const [items, setItems] = useState<Bookmark[]>([]);
+  const [version, setVersion] = useState<Language>('en');
   const [reference, setReference] = useState<Reference | null>(null);
   const [error, setError] = useState('');
   const refresh = useCallback(() => {
@@ -32,7 +22,6 @@ export function SavedVerses() {
   useFocusEffect(refresh);
   return (
     <Screen>
-      <IconButton name="menu-outline" label="Open menu" onPress={openDrawer} />
       <View style={{ gap: 8 }}>
         <Label>{sw ? 'MANENO YANAYOKUBEBA' : 'WORDS TO CARRY WITH YOU'}</Label>
         <Title>{sw ? 'Mistari yako.' : 'Your saved verses.'}</Title>
@@ -48,14 +37,15 @@ export function SavedVerses() {
           <Pressable
             key={`${verse.version}:${verse.bookId}:${verse.chapter}:${verse.verse}`}
             accessibilityRole="button"
-            onPress={() =>
+            onPress={() => {
+              setVersion(verse.version);
               setReference({
                 bookId: verse.bookId,
                 chapter: verse.chapter,
                 verseStart: verse.verse,
                 verseEnd: verse.verse,
-              })
-            }
+              });
+            }}
             style={styles.card}
           >
             <View style={styles.row}>
@@ -81,6 +71,7 @@ export function SavedVerses() {
       )}
       <ScriptureSheet
         reference={reference}
+        version={version}
         onClose={() => setReference(null)}
         onBookmarkChange={refresh}
       />
@@ -88,11 +79,11 @@ export function SavedVerses() {
   );
 }
 export function About() {
+  const { colors, styles } = useUi();
   const { language } = useApp();
   const sw = language === 'sw';
   return (
     <Screen>
-      <IconButton name="menu-outline" label="Open menu" onPress={openDrawer} />
       <View style={{ gap: 10 }}>
         <Label>BEACON OF HOPE</Label>
         <Title>{sw ? 'Mwanga wa kushiriki.' : 'A little light, freely shared.'}</Title>

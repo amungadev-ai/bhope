@@ -4,23 +4,10 @@ import type { Inspiration } from '@bhope/shared';
 import { api, apiUrl } from '../lib/api';
 import { getPreference, setPreference } from '../lib/storage';
 import { useApp } from '../lib/context';
-import { openDrawer } from '../navigation/actions';
-import {
-  Body,
-  Button,
-  colors,
-  Empty,
-  fonts,
-  Icon,
-  IconButton,
-  Label,
-  LanguageSwitch,
-  Screen,
-  styles,
-  Title,
-} from '../components/ui';
+import { Body, Button, Empty, fonts, Icon, Label, Screen, Title, useUi } from '../components/ui';
 import { TikTokPlayer } from '../components/tiktok-player';
 export default function Inspirations() {
+  const { colors, styles } = useUi();
   const { language } = useApp();
   const sw = language === 'sw';
   const [items, setItems] = useState<Inspiration[]>([]);
@@ -53,11 +40,6 @@ export default function Inspirations() {
   }, []);
   return (
     <Screen>
-      <View style={styles.row}>
-        <IconButton name="menu-outline" label="Open menu" onPress={openDrawer} />
-        <Label>{sw ? 'TUMAINI LINAKUTANA NAWE' : 'HOPE MEETS YOU HERE'}</Label>
-        <LanguageSwitch />
-      </View>
       <View style={{ gap: 10 }}>
         <Title>
           {sw ? 'Msukumo mdogo.\nTumaini zaidi.' : 'A little inspiration.\nA little more hope.'}
@@ -97,7 +79,7 @@ export default function Inspirations() {
                 style={{
                   height: 170,
                   borderRadius: 18,
-                  backgroundColor: '#E8ECDD',
+                  backgroundColor: colors.soft,
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 12,

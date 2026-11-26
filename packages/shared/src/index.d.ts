@@ -105,3 +105,18 @@ export interface Donation {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AiAccess {
+  freeTotal: number;
+  freeUsed: number;
+  freeRemaining: number;
+  active: boolean;
+  staff: boolean;
+  paidUntil: string | null;
+  monthlyPrice: number;
+  currency: string;
+  dailyLimit: number;
+  dailyRemaining: number;
+  billingAvailable: boolean;
+  aiEnabled: boolean;
+}

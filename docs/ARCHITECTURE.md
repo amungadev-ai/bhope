@@ -8,7 +8,11 @@ MySQL is the production database. Node's SQLite implementation supports a zero-c
 
 ## Navigation
 
-Direct React Navigation 7 combines a root native stack, a drawer, and four bottom tabs. Root screens include devotional details, the note editor, and a Bible reader opened from a note. Opening the Bible over the editor keeps that editor mounted; returning a passage pops back to the same note. Expo Router has been removed. Native dependencies are selected for Expo SDK 58 and Expo Go.
+Direct React Navigation 7 combines a root native stack and five bottom tabs, with the drawer nested inside More. Root screens include devotional details, the note editor, and a Bible reader opened from a note. Opening the Bible over the editor keeps that editor mounted; returning a passage pops back to the same note. Expo Router has been removed. Native dependencies are selected for Expo SDK 58 and Expo Go.
+
+Home and Notebook use navigator headers. The Bible uses a compact fixed toolbar with book/chapter, its own language switch, search, and version information. More has a fixed drawer header; its other screens use a back action. The editor has a fixed title/options row and a flex-height WebView in KeyboardAvoidingView, with formatting and metadata in a single contextual sheet. Passage actions expand from a footer ellipsis.
+
+App language and Bible language have separate persisted preferences. The old language preference seeds the Bible language once during migration, after which they remain independent. Four light palettes cover navigation, screens, dialogs, and editor CSS variables. No Bible or note tables are replaced by theme/language changes.
 
 ## Scripture-aware notebook
 
@@ -16,7 +20,7 @@ The shared parser knows 66 canonical book IDs, English/Swahili names and common 
 
 Full XML imports are local and excluded from the public repository. Metro selects `.local/bible.json` when present and otherwise uses the clearly labelled development sample. A content fingerprint controls SQLite replacement during initialization. Verse inserts are batched inside a transaction, and Bible updates do not replace user notes or bookmarks.
 
-The rich editor runs in a local offline WebView on native and an isolated iframe in the browser preview. Saved HTML is sanitized through an allowlist before loading. Paste uses plain text. Blue reference spans and passage long-press actions use the same shared parser as Bible search, without network calls. The runtime functions are compiled to source strings by `npm run editor:build` in Node; native Hermes does not stringify them at runtime. Both rich HTML and searchable/exportable plain text are stored in the existing note payload; old plain-text notes are migrated on opening.
+The rich editor runs in a local offline WebView on native and an isolated iframe in the browser preview. Saved HTML is sanitized through an allowlist before loading. Paste uses plain text. Blue reference spans and passage long-press actions use the same shared parser as Bible search, without network calls. The runtime functions are compiled to source strings by `npm run editor:build` in Node; native Hermes does not stringify them at runtime. Both rich HTML and searchable/exportable plain text are stored in the existing note payload; old plain-text notes remain editable. Plain text is derived from DOM blocks, lists, line breaks, and checkbox state rather than hidden-clone innerText. Existing rich notes whose plain text was empty are repaired on opening. A ready/connect handshake recovers the initial snapshot in the browser preview.
 
 ## Notes and account privacy
 
@@ -32,7 +36,7 @@ Reader registration always creates the `user` role. Editors can save their draft
 
 ## DeepSeek
 
-The backend calls the configurable DeepSeek model using the documented chat-completions endpoint. Keys are read from server environment variables. Requests require authentication, explicit consent, a bounded text size, and a daily per-account allowance. Allowances count attempts, including failed requests, and reset by UTC date. Upstream timeouts and failures return readable errors without upstream payloads or secrets.
+The backend calls the configurable DeepSeek model using the documented chat-completions endpoint. Keys are read from server environment variables. Requests require authentication, explicit consent, a bounded text size, and a daily per-account allowance. The daily request limit counts attempts, including failed requests, and resets by UTC date. Reader accounts also receive five lifetime free successful uses, reserved atomically before an upstream request and restored when that request fails. Continued reader access requires an unexpired entitlement. Editorial staff retain assistance under the daily limit. The plan is KES 150/month, but store checkout is not configured. The admin studio lists usage and audited support adjustments; these never create payments or donations. See [AI access](AI_ACCESS.md). Upstream timeouts and failures return readable errors without upstream payloads or secrets.
 
 The mobile app sends selected note text, or the current note's text if no selection exists. The result is shown separately and inserted only by an explicit user action. The server does not inject Bible-library text into AI requests. Editors can request outlines and must review the output. Publisher permissions still govern any copyrighted text a user elects to submit.
 
@@ -55,6 +59,7 @@ Daily devotionals, Bible reading, and notes are free. Paid articles/series are p
 5. Build account-linked note synchronization, conflict copies, and backup/restore UI.
 6. Verify M-Pesa sandbox/Paystack test payments and callbacks; curate approved TikTok videos.
 7. Add opt-in reminders and reviewed public funding updates.
-8. Test on physical Android devices, add accessibility/localization coverage, and prepare an EAS production build.
+8. Configure store subscription products, receipt verification, renewal/refund notifications, and a development build for the AI plan.
+9. Test on physical Android devices, add accessibility/localization coverage, and prepare an EAS production build.
 
 The current development version is intended for Expo Go evaluation. It is not a completed public-store release.

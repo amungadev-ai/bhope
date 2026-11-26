@@ -1,9 +1,11 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { useUi } from './ui';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { WebView } from 'react-native-webview';
 import { createEditorDocument } from '../lib/editor-document';
 import type { RichEditorHandle, RichEditorProps } from './rich-editor-types';
 export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
   function RichEditor(props, ref) {
+    const { colors } = useUi();
     const webview = useRef<WebView<object>>(null);
     const ready = useRef(false);
     const pending = useRef<string[]>([]);
@@ -12,6 +14,7 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
         html: props.initialHtml,
         text: props.initialText,
         placeholder: props.placeholder,
+        colors,
       }),
     );
     function run(code: string) {
@@ -22,12 +25,18 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
       command: (command) => run(`window.BeaconEditor.command(${JSON.stringify(command)});true;`),
       appendText: (text) => run(`window.BeaconEditor.appendText(${JSON.stringify(text)});true;`),
     }));
+    useEffect(() => {
+      if (ready.current)
+        webview.current?.injectJavaScript(
+          `window.BeaconEditor.setTheme(${JSON.stringify(colors)});true;`,
+        );
+    }, [colors]);
     return (
       <WebView<object>
         ref={webview}
         source={{ html: document }}
         originWhitelist={['about:blank']}
-        style={{ height: 390, backgroundColor: '#F7F7F0' }}
+        style={{ flex: 1, minHeight: 120, backgroundColor: colors.background }}
         scrollEnabled
         keyboardDisplayRequiresUserAction={false}
         hideKeyboardAccessoryView={false}
@@ -41,6 +50,9 @@ export const RichEditor = forwardRef<RichEditorHandle, RichEditorProps>(
             const message = JSON.parse(event.nativeEvent.data);
             if (message.type === 'ready') {
               ready.current = true;
+              webview.current?.injectJavaScript(
+                `window.BeaconEditor.setTheme(${JSON.stringify(colors)});true;`,
+              );
               for (const code of pending.current.splice(0)) webview.current?.injectJavaScript(code);
             } else if (
               message.type === 'change' &&

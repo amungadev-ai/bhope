@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
-import { goBack, openDrawer, type BibleParams } from '../navigation/actions';
+import { goBack, type BibleParams } from '../navigation/actions';
 import {
   books,
   extractReferences,
@@ -20,8 +20,6 @@ import {
 } from '../lib/storage';
 import {
   Body,
-  Button,
-  colors,
   fonts,
   Icon,
   IconButton,
@@ -30,13 +28,13 @@ import {
   LanguageSwitch,
   Screen,
   Sheet,
-  styles,
-  Title,
+  useUi,
 } from '../components/ui';
 import { ScriptureSheet } from '../components/scripture-sheet';
 export default function BibleScreen() {
+  const { colors, styles } = useUi();
   const params = (useRoute().params ?? {}) as BibleParams;
-  const { language, fontSize, setFontSize } = useApp();
+  const { language: appLanguage, bibleLanguage: language, fontSize, setFontSize } = useApp();
   const [bookId, setBookId] = useState(19);
   const [chapter, setChapter] = useState(23);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -56,7 +54,8 @@ export default function BibleScreen() {
   const [actions, setActions] = useState<Reference | null>(null);
   const route = useRoute();
   const reader = route.name === 'BibleReader';
-  const sw = language === 'sw';
+  const sw = appLanguage === 'sw';
+  const [options, setOptions] = useState(false);
   useFocusEffect(
     useCallback(() => {
       if (params.book) {
@@ -146,6 +145,7 @@ export default function BibleScreen() {
     if (chapters[index]) {
       setChapter(chapters[index]);
       setHighlight(undefined);
+      setHighlightEnd(undefined);
       return;
     }
     const book = available[available.indexOf(bookId) + direction];
@@ -154,42 +154,88 @@ export default function BibleScreen() {
       setBookId(book);
       setChapter(direction > 0 ? nextChapters[0] : nextChapters[nextChapters.length - 1]);
       setHighlight(undefined);
+      setHighlightEnd(undefined);
     }
   }
   const book = books.find((item) => item.id === bookId)!;
-  return (
-    <Screen>
-      <View style={styles.row}>
+  const header = (
+    <View
+      style={{
+        backgroundColor: colors.background,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.line,
+        paddingHorizontal: 16,
+        paddingBottom: 10,
+        gap: 6,
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 }}>
+        {reader ? <IconButton name="arrow-back" label="Return to note" onPress={goBack} /> : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Choose Bible book"
+          onPress={() => setPicker('book')}
+          style={[styles.chip, { flex: 1, justifyContent: 'space-between', minHeight: 42 }]}
+        >
+          <Text numberOfLines={1} style={[styles.chipText, { fontSize: 15, flexShrink: 1 }]}>
+            {book[language]}
+          </Text>
+          <Icon name="chevron-down" size={13} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Choose chapter"
+          onPress={() => setPicker('chapter')}
+          style={[styles.chip, { minHeight: 42 }]}
+        >
+          <Text style={styles.chipText}>{chapter}</Text>
+          <Icon name="chevron-down" size={12} />
+        </Pressable>
+        <LanguageSwitch bibleOnly />
         <IconButton
-          name={reader ? 'arrow-back' : 'menu-outline'}
-          label={reader ? 'Return to note' : 'Open menu'}
-          onPress={reader ? goBack : openDrawer}
+          name="ellipsis-vertical"
+          label={highlight ? 'Verse options' : 'Bible options'}
+          onPress={() =>
+            highlight
+              ? setActions({
+                  bookId,
+                  chapter,
+                  verseStart: highlight,
+                  verseEnd: highlightEnd ?? highlight,
+                })
+              : setOptions(true)
+          }
         />
-        <Label>
-          {reader && params.sourceNoteId
-            ? sw
-              ? 'BIBLIA NA DAFTARI'
-              : 'BIBLE & NOTEBOOK'
-            : sw
-              ? 'NAFASI YAKO YA KUSOMA'
-              : 'YOUR READING SPACE'}
-        </Label>
-        <LanguageSwitch />
       </View>
-      <View style={styles.row}>
-        <View style={{ gap: 6 }}>
-          <Label>{sw ? 'NENO LILILO HAI' : 'THE LIVING WORD'}</Label>
-          <Title>{sw ? 'Biblia yako.' : 'Your Bible.'}</Title>
-        </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Input
+          accessibilityLabel="Search Bible"
+          placeholder={sw ? 'Rejeo au neno · Yohana 1:1–10' : 'Reference or word · John 1:1–10'}
+          value={query}
+          onChangeText={setQuery}
+          style={{ flex: 1, minHeight: 38, paddingVertical: 7, fontSize: 13 }}
+        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Bible version information"
+          onPress={() => setOptions(true)}
+          style={{ maxWidth: 70 }}
+        >
+          <Text
+            numberOfLines={2}
+            style={{ fontFamily: fonts.bold, fontSize: 10, color: colors.muted }}
+          >
+            {bible.versions
+              .find((v) => v.id === language)
+              ?.name.replace(/development sample|original paraphrases/gi, '')
+              .trim()}
+          </Text>
+        </Pressable>
       </View>
-      <Input
-        accessibilityLabel="Search Bible"
-        placeholder={
-          sw ? 'Tafuta Yohana 1: 1–10 au neno' : 'Try John 1: 1–10, jhon 3:16, or a word'
-        }
-        value={query}
-        onChangeText={setQuery}
-      />
+    </View>
+  );
+  return (
+    <Screen safeTop header={header}>
       {query.trim().length >= 2 ? (
         <View style={{ gap: 14 }}>
           <View style={styles.row}>
@@ -221,53 +267,6 @@ export default function BibleScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.row}>
-            <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Choose Bible book"
-                onPress={() => setPicker('book')}
-                style={[styles.chip, { flex: 1, justifyContent: 'space-between' }]}
-              >
-                <Text style={[styles.chipText, { fontSize: 15 }]}>{book[language]}</Text>
-                <Icon name="chevron-down" size={14} />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Choose chapter"
-                onPress={() => setPicker('chapter')}
-                style={styles.chip}
-              >
-                <Text style={styles.chipText}>{chapter}</Text>
-                <Icon name="chevron-down" size={14} />
-              </Pressable>
-            </View>
-            <IconButton
-              name="remove"
-              label="Smaller Bible text"
-              onPress={() => setFontSize(fontSize - 2)}
-            />
-            <IconButton
-              name="add"
-              label="Larger Bible text"
-              onPress={() => setFontSize(fontSize + 2)}
-            />
-          </View>
-          <View
-            style={{
-              borderBottomWidth: 1,
-              borderBottomColor: colors.line,
-              paddingBottom: 18,
-              gap: 8,
-            }}
-          >
-            <Label>
-              {bible.versions.find((version) => version.id === language)?.name.toUpperCase()}
-            </Label>
-            <Text style={{ fontFamily: fonts.serif, fontSize: 28, color: colors.ink }}>
-              {book[language]} {chapter}
-            </Text>
-          </View>
           {loading ? (
             <ActivityIndicator color={colors.ink} />
           ) : (
@@ -297,11 +296,11 @@ export default function BibleScreen() {
                       marginHorizontal: -12,
                       borderRadius: 12,
                       backgroundColor: selected
-                        ? '#E8EDDC'
+                        ? colors.soft
                         : highlight &&
                             verse.verse >= highlight &&
                             verse.verse <= (highlightEnd ?? highlight)
-                          ? '#E4EDF6'
+                          ? colors.selection
                           : 'transparent',
                       flexDirection: 'row',
                       gap: 12,
@@ -359,8 +358,7 @@ export default function BibleScreen() {
           </View>
           {bible.sample ? (
             <Body muted>
-              Development sample · Psalm 23, John 3:16, and Philippians 4:6–7. The full NIV and SRUV
-              libraries can be imported from your XML files.
+              Sample Bible · Psalm 23, John 1:1–10, John 3:16, and Philippians 4:6–7.
             </Body>
           ) : (
             <Body muted>
@@ -370,24 +368,33 @@ export default function BibleScreen() {
         </>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
-      {highlight ? (
-        <Button
-          secondary
-          icon="ellipsis-horizontal"
-          onPress={() =>
-            setActions({
-              bookId,
-              chapter,
-              verseStart: highlight,
-              verseEnd: highlightEnd ?? highlight,
-            })
-          }
-        >
-          {sw ? 'Chaguzi za kifungu' : 'Passage actions'}
-        </Button>
-      ) : null}
+      <Sheet
+        visible={options}
+        title={sw ? 'Chaguzi za kusoma' : 'Reading options'}
+        onClose={() => setOptions(false)}
+      >
+        <Body>{bible.versions.find((v) => v.id === language)?.name}</Body>
+        <View style={styles.row}>
+          <Body>{sw ? 'Ukubwa wa maandishi' : 'Text size'}</Body>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <IconButton
+              name="remove"
+              label="Smaller Bible text"
+              onPress={() => setFontSize(fontSize - 2)}
+            />
+            <IconButton
+              name="add"
+              label="Larger Bible text"
+              onPress={() => setFontSize(fontSize + 2)}
+            />
+          </View>
+        </View>
+        <Body muted>{bible.versions.find((v) => v.id === language)?.copyright}</Body>
+      </Sheet>
       <ScriptureSheet
         reference={actions}
+        showActionsOnOpen
+        version={language}
         onClose={() => setActions(null)}
         sourceNoteId={params.sourceNoteId}
         showOpenBible={false}
@@ -428,6 +435,7 @@ export default function BibleScreen() {
                 setChapter(1);
                 setPicker(null);
                 setHighlight(undefined);
+                setHighlightEnd(undefined);
               }}
               style={[styles.row, { paddingVertical: 9 }]}
             >
@@ -448,6 +456,7 @@ export default function BibleScreen() {
                 setChapter(number);
                 setPicker(null);
                 setHighlight(undefined);
+                setHighlightEnd(undefined);
               }}
               style={[
                 styles.chip,

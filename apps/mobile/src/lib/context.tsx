@@ -2,6 +2,7 @@ import { createContext, useContext, useCallback, useEffect, useState, type React
 import { devotionalSeeds, type Devotional, type Language } from '@bhope/shared';
 import { bible, getPreference, initializeStorage, setPreference } from './storage';
 import { api, apiUrl } from './api';
+import { isTheme, type ThemeId } from './themes';
 export interface AccountUser {
   id: string;
   name: string;
@@ -13,6 +14,10 @@ interface AppState {
   refreshUser: () => Promise<void>;
   language: Language;
   setLanguage: (language: Language) => void;
+  bibleLanguage: Language;
+  setBibleLanguage: (language: Language) => void;
+  theme: ThemeId;
+  setTheme: (theme: ThemeId) => void;
   fontSize: number;
   setFontSize: (size: number) => void;
   ready: boolean;
@@ -49,6 +54,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const [language, updateLanguage] = useState<Language>('en');
+  const [bibleLanguage, updateBibleLanguage] = useState<Language>('en');
+  const [theme, updateTheme] = useState<ThemeId>('evergreen');
   const [fontSize, updateSize] = useState(20);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -61,10 +68,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await initializeStorage();
       const preferred = await getPreference('language');
       const available = bible.versions.some((version) => version.id === preferred);
+      const preferredBible = await getPreference('bible-language');
+      const initialBibleLanguage = bible.versions.some((version) => version.id === preferredBible)
+        ? (preferredBible as Language)
+        : available
+          ? (preferred as Language)
+          : bible.versions[0].id;
+      if (!preferredBible) await setPreference('bible-language', initialBibleLanguage);
+      const savedTheme = await getPreference('theme');
       const size = Number(await getPreference('font-size'));
       const cache = await getPreference('devotionals-cache');
       if (active) {
-        updateLanguage(available ? (preferred as Language) : bible.versions[0].id);
+        updateLanguage(available ? (preferred as Language) : 'en');
+        updateBibleLanguage(initialBibleLanguage);
+        if (isTheme(savedTheme)) updateTheme(savedTheme);
         if (size >= 16 && size <= 28) updateSize(size);
         if (cache) {
           try {
@@ -101,6 +118,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setError('Your language preference could not be saved.'),
     );
   };
+  const changeBibleLanguage = (value: Language) => {
+    updateBibleLanguage(value);
+    void setPreference('bible-language', value).catch(() =>
+      setError('Your Bible language could not be saved.'),
+    );
+  };
+  const changeTheme = (value: ThemeId) => {
+    updateTheme(value);
+    void setPreference('theme', value).catch(() => setError('Your theme could not be saved.'));
+  };
   const changeSize = (value: number) => {
     const size = Math.max(16, Math.min(28, value));
     updateSize(size);
@@ -115,6 +142,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshUser,
         language,
         setLanguage: changeLanguage,
+        bibleLanguage,
+        setBibleLanguage: changeBibleLanguage,
+        theme,
+        setTheme: changeTheme,
         fontSize,
         setFontSize: changeSize,
         ready,

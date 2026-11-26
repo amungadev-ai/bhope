@@ -11,18 +11,30 @@ export function editorRuntime(config, extract) {
     else window.parent.postMessage({ beaconEditor: true, payload }, '*');
   };
   function plainText() {
-    const copy = editor.cloneNode(true);
-    for (const input of copy.querySelectorAll('input[type="checkbox"]'))
-      input.replaceWith(
-        document.createTextNode(input.checked || input.hasAttribute('checked') ? '☑ ' : '☐ '),
-      );
-    copy.style.position = 'absolute';
-    copy.style.visibility = 'hidden';
-    copy.style.whiteSpace = 'pre-wrap';
-    document.body.appendChild(copy);
-    const text = copy.innerText.replace(/\u00a0/g, ' ');
-    copy.remove();
-    return text.replace(/\n{3,}/g, '\n\n').trimEnd();
+    // Read the DOM structure directly: innerText on a hidden clone can be empty.
+    const blocks = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'LI', 'BLOCKQUOTE']);
+    function read(node) {
+      if (node.nodeType === 3) return node.textContent.replace(/\u00a0/g, ' ');
+      if (node.nodeType !== 1) return '';
+      if (node.tagName === 'BR') return '\n';
+      if (node.tagName === 'INPUT') return node.checked ? '☑ ' : '☐ ';
+      if (node.tagName === 'UL' || node.tagName === 'OL') {
+        let index = 0;
+        return [...node.childNodes]
+          .map((child) => {
+            const text = read(child);
+            if (child.nodeType !== 1 || child.tagName !== 'LI') return text;
+            index += 1;
+            return `${node.tagName === 'OL' ? `${index}. ` : '• '}${text.trimEnd()}\n`;
+          })
+          .join('');
+      }
+      const text = [...node.childNodes].map(read).join('');
+      return blocks.has(node.tagName) ? `${text}\n` : text;
+    }
+    return read(editor)
+      .replace(/\n{3,}/g, '\n\n')
+      .trimEnd();
   }
   function sanitize(html) {
     const template = document.createElement('template');
@@ -290,10 +302,20 @@ export function editorRuntime(config, extract) {
   window.addEventListener('message', (event) => {
     if (event.source !== window.parent || !event.data?.beaconCommand) return;
     const message = event.data;
-    if (message.command === 'append') appendText(String(message.text ?? ''));
+    if (message.command === 'connect') {
+      send({ type: 'ready' });
+      emit();
+    } else if (message.command === 'theme') setTheme(message.colors);
+    else if (message.command === 'append') appendText(String(message.text ?? ''));
     else command(String(message.command));
   });
+  function setTheme(colors) {
+    for (const key of ['background', 'ink', 'muted', 'green', 'gold', 'scripture', 'soft'])
+      if (/^#[0-9a-f]{6}$/i.test(colors?.[key] ?? ''))
+        document.documentElement.style.setProperty(`--${key}`, colors[key]);
+  }
   window.BeaconEditor = {
+    setTheme,
     command,
     appendText,
     getHtml: () => editor.innerHTML,
@@ -314,4 +336,5 @@ export function editorRuntime(config, extract) {
   highlight();
   editor.dataset.empty = String(!plainText().trim());
   send({ type: 'ready' });
+  emit();
 }

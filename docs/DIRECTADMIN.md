@@ -85,7 +85,7 @@ npm run db:migrate
 npm run user:create -- --email you@example.com --name "Your Name" --role admin
 ```
 
-The account tool prompts for a hidden password. It also supports `CREATE_USER_PASSWORD` for a temporary secure environment injection; do not put passwords in command-line arguments or source files. The schema contains users, hashed sessions, devotionals, private note records, daily AI usage counters, role-change audit events, curated inspirations, and donations. Migrations run in filename order; the new tables do not replace existing notes or accounts. Two original sample devotionals are seeded only when the library is empty.
+The account tool prompts for a hidden password. It also supports `CREATE_USER_PASSWORD` for a temporary secure environment injection; do not put passwords in command-line arguments or source files. The schema contains users, hashed sessions, devotionals, private note records, daily AI usage counters, role-change audit events, curated inspirations, donations, lifetime AI usage, and access-adjustment audit records. Migrations run in filename order; the new tables do not replace existing notes or accounts. Two original sample devotionals are seeded only when the library is empty.
 
 ## 6. Restart and verify
 
@@ -95,7 +95,8 @@ The account tool prompts for a hidden password. It also supports `CREATE_USER_PA
 - `GET /api/v1/devotionals` returns published content whose publication time has arrived.
 - The server can make outbound HTTPS requests to `api.deepseek.com`.
 - `GET /api/v1/inspirations` returns an empty list until a real video is published.
-- Admins can view Giving & reports; editors cannot access finance endpoints.
+- `/api/v1/ai/access` shows five lifetime free uses and the KES 150 plan for authenticated readers; no store purchase endpoint is enabled.
+- Admins can view AI access & plans and Giving & reports; editors cannot access finance endpoints.
 - `GET /api/v1/config` keeps payment methods disabled while merchant keys are blank.
 - Requests for `/.env`, `/package.json`, `/migrations/001_initial.sql`, and `/dist/config.js` do not expose files.
 

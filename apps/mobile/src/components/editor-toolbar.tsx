@@ -1,5 +1,5 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { colors, fonts, Icon, type IconName } from './ui';
+import { Pressable, Text, View } from 'react-native';
+import { fonts, Icon, useUi, type IconName } from './ui';
 import type { EditorCommand } from './rich-editor-types';
 const tools: { command: EditorCommand; label: string; text?: string; icon?: IconName }[] = [
   { command: 'bold', label: 'Bold', text: 'B' },
@@ -13,90 +13,49 @@ const tools: { command: EditorCommand; label: string; text?: string; icon?: Icon
   { command: 'undo', label: 'Undo', icon: 'arrow-undo-outline' },
   { command: 'redo', label: 'Redo', icon: 'arrow-redo-outline' },
 ];
-export function EditorToolbar({
-  onCommand,
-  onReflect,
-  onBible,
-}: {
-  onCommand: (command: EditorCommand) => void;
-  onReflect: () => void;
-  onBible: () => void;
-}) {
+export function EditorToolbar({ onCommand }: { onCommand: (command: EditorCommand) => void }) {
+  const { colors } = useUi();
   return (
-    <View
-      style={{
-        borderRadius: 16,
-        backgroundColor: '#EBEEDF',
-        padding: 6,
-        gap: 4,
-        flexDirection: 'row',
-        alignItems: 'center',
-      }}
-    >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
-        style={{ flex: 1 }}
-        contentContainerStyle={{ gap: 2 }}
-      >
-        {tools.map((tool) => (
-          <Pressable
-            key={tool.command}
-            accessibilityRole="button"
-            accessibilityLabel={tool.label}
-            onPress={() => onCommand(tool.command)}
-            style={{
-              height: 40,
-              minWidth: 38,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 10,
-            }}
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+      {tools.map((tool) => (
+        <Pressable
+          key={tool.command}
+          accessibilityRole="button"
+          accessibilityLabel={tool.label}
+          onPress={() => onCommand(tool.command)}
+          style={{
+            width: '18%',
+            minHeight: 62,
+            borderRadius: 12,
+            backgroundColor: colors.soft,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          {tool.icon ? (
+            <Icon name={tool.icon} size={20} />
+          ) : (
+            <Text
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: 17,
+                color: colors.ink,
+                fontStyle: tool.command === 'italic' ? 'italic' : 'normal',
+                textDecorationLine: tool.command === 'underline' ? 'underline' : 'none',
+              }}
+            >
+              {tool.text}
+            </Text>
+          )}
+          <Text
+            numberOfLines={1}
+            style={{ fontFamily: fonts.body, fontSize: 9, color: colors.muted }}
           >
-            {tool.icon ? (
-              <Icon name={tool.icon} size={19} />
-            ) : (
-              <Text
-                style={{
-                  fontFamily: fonts.bold,
-                  fontSize: 16,
-                  color: colors.ink,
-                  fontStyle: tool.command === 'italic' ? 'italic' : 'normal',
-                  textDecorationLine: tool.command === 'underline' ? 'underline' : 'none',
-                }}
-              >
-                {tool.text}
-              </Text>
-            )}
-          </Pressable>
-        ))}
-      </ScrollView>
-      <View
-        style={{
-          flexDirection: 'row',
-          borderLeftWidth: 1,
-          borderLeftColor: '#D6DECA',
-          paddingLeft: 4,
-        }}
-      >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open Bible beside this note"
-          onPress={onBible}
-          style={{ height: 40, width: 42, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Icon name="book-outline" size={20} />
+            {tool.label}
+          </Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Reflection tools"
-          onPress={onReflect}
-          style={{ height: 40, width: 42, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Icon name="sparkles-outline" size={19} color={colors.green} />
-        </Pressable>
-      </View>
+      ))}
     </View>
   );
 }

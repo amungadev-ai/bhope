@@ -10,8 +10,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from './src/lib/context';
 import { AppNavigation } from './src/navigation';
-import { Body, Button, colors, fonts } from './src/components/ui';
+import { Body, Button, useUi, fonts } from './src/components/ui';
 function Content() {
+  const { colors } = useUi();
   const { ready, error, retry } = useApp();
   if (!ready || error)
     return (
@@ -34,7 +35,11 @@ function Content() {
         )}
       </View>
     );
-  return <AppNavigation />;
+  return (
+    <View style={{ flex: 1, width: '100%', maxWidth: 600, backgroundColor: colors.background }}>
+      <AppNavigation />
+    </View>
+  );
 }
 export default function App() {
   const [loaded, error] = useFonts({
@@ -49,27 +54,23 @@ export default function App() {
       <View
         style={{
           flex: 1,
-          backgroundColor: colors.background,
+          backgroundColor: '#F7F7F0',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <ActivityIndicator color={colors.ink} />
+        <ActivityIndicator color="#193B32" />
       </View>
     );
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <View style={{ flex: 1, backgroundColor: '#E5E9DE', alignItems: 'center' }}>
-          <View
-            style={{ flex: 1, width: '100%', maxWidth: 600, backgroundColor: colors.background }}
-          >
-            <AppProvider>
-              <Content />
-            </AppProvider>
+        <AppProvider>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Content />
           </View>
-        </View>
+        </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

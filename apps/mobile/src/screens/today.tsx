@@ -1,22 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { navigate, openTab, openDrawer } from '../navigation/actions';
+import { navigate, openTab } from '../navigation/actions';
 import { formatReference } from '@bhope/shared';
 import { useApp } from '../lib/context';
 import { getPassage } from '../lib/storage';
-import {
-  Body,
-  colors,
-  fonts,
-  Icon,
-  Label,
-  LanguageSwitch,
-  Screen,
-  styles,
-  Title,
-} from '../components/ui';
+import { Body, fonts, Icon, Label, Screen, Title, useUi } from '../components/ui';
 export default function Today() {
+  const { colors, styles } = useUi();
+  const local = makeLocal(colors);
   const { language, devotionals } = useApp();
   const [verse, setVerse] = useState('');
   const devotional = devotionals[0];
@@ -42,22 +34,6 @@ export default function Today() {
   }).format(new Date());
   return (
     <Screen>
-      <View style={styles.row}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Open menu"
-          onPress={openDrawer}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}
-        >
-          <View style={local.logo}>
-            <Icon name="menu-outline" color={colors.green} size={25} />
-          </View>
-          <Text style={local.wordmark}>
-            beacon of hope<Text style={{ color: colors.gold }}>.</Text>
-          </Text>
-        </Pressable>
-        <LanguageSwitch />
-      </View>
       <View style={{ gap: 10 }}>
         <Label>{date.toUpperCase()}</Label>
         <Title>{sw ? 'Mwanga mdogo\nkwa siku yako.' : 'A little light\nfor your day.'}</Title>
@@ -70,7 +46,7 @@ export default function Today() {
         accessibilityLabel="Read today's devotional"
         onPress={() => navigate('Devotional', { id: devotional.id })}
       >
-        <LinearGradient colors={['#2B5743', '#173D32']} style={local.hero}>
+        <LinearGradient colors={[colors.hero, colors.heroEnd]} style={local.hero}>
           <View pointerEvents="none" style={local.orbit} />
           <View pointerEvents="none" style={local.orbit2} />
           <View pointerEvents="none" style={local.sun} />
@@ -119,7 +95,7 @@ export default function Today() {
           <Pressable
             accessibilityRole="button"
             onPress={() => openTab('Notebook')}
-            style={[local.quickCard, { backgroundColor: '#F0EDDF' }]}
+            style={[local.quickCard, { backgroundColor: colors.peach }]}
           >
             <View style={[local.quickIcon, { backgroundColor: '#E7E2CF' }]}>
               <Icon name="create-outline" />
@@ -176,129 +152,130 @@ export default function Today() {
     </Screen>
   );
 }
-const local = StyleSheet.create({
-  logo: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 14,
-    backgroundColor: '#EBEBD9',
-  },
-  wordmark: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
-  hero: { borderRadius: 26, padding: 24, overflow: 'hidden', gap: 15 },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFFFFF12',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  heroBadgeText: { fontFamily: fonts.bold, fontSize: 8, letterSpacing: 1.25, color: '#E7D8AD' },
-  minutes: { fontFamily: fonts.body, color: '#C6D3C2', fontSize: 10 },
-  heroTitle: {
-    fontFamily: fonts.serif,
-    fontSize: 31,
-    lineHeight: 40,
-    color: '#FFFEF4',
-    maxWidth: 265,
-    marginTop: 10,
-  },
-  heroSubtitle: {
-    fontFamily: fonts.body,
-    color: '#D3DDCB',
-    fontSize: 13,
-    lineHeight: 22,
-    maxWidth: 250,
-  },
-  heroReference: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroReferenceText: { color: '#DFE6D8', fontFamily: fonts.medium, fontSize: 12 },
-  heroButton: {
-    backgroundColor: '#F4F4E8',
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  heroButtonText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
-  orbit: {
-    position: 'absolute',
-    height: 280,
-    width: 280,
-    borderWidth: 1,
-    borderColor: '#DDE2A91A',
-    borderRadius: 140,
-    right: -135,
-    top: 50,
-  },
-  orbit2: {
-    position: 'absolute',
-    height: 220,
-    width: 220,
-    borderWidth: 1,
-    borderColor: '#DDE2A91A',
-    borderRadius: 110,
-    right: -105,
-    top: 80,
-  },
-  sun: {
-    position: 'absolute',
-    height: 75,
-    width: 75,
-    borderRadius: 40,
-    right: -18,
-    top: 130,
-    backgroundColor: '#D2B36D24',
-  },
-  quickCard: { flex: 1, borderRadius: 20, backgroundColor: '#E8ECDD', padding: 18, gap: 10 },
-  quickIcon: {
-    width: 37,
-    height: 37,
-    backgroundColor: '#DBE2CE',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickTitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-  quickText: { fontFamily: fonts.body, fontSize: 11, lineHeight: 17, color: colors.muted },
-  verseCard: {
-    backgroundColor: '#F4EFE2',
-    borderRadius: 22,
-    padding: 22,
-    gap: 18,
-    borderWidth: 1,
-    borderColor: '#EAE2D1',
-  },
-  verse: { fontFamily: fonts.italic, fontSize: 20, lineHeight: 31, color: colors.ink },
-  verseCaption: { fontFamily: fonts.bold, fontSize: 9, color: '#8C7955', letterSpacing: 2 },
-  sectionTitle: { fontFamily: fonts.serif, fontSize: 23, color: colors.ink },
-  nextCard: {
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#FFFFFF80',
-  },
-  nextIcon: {
-    width: 45,
-    height: 49,
-    borderRadius: 15,
-    backgroundColor: '#E7ECE4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footer: {
-    fontFamily: fonts.body,
-    fontSize: 10,
-    textAlign: 'center',
-    color: '#8A9485',
-    marginTop: 3,
-  },
-});
+const makeLocal = (colors: import('../lib/themes').Palette) =>
+  StyleSheet.create({
+    logo: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 14,
+      backgroundColor: '#EBEBD9',
+    },
+    wordmark: { fontFamily: fonts.serif, fontSize: 18, color: colors.ink },
+    hero: { borderRadius: 26, padding: 24, overflow: 'hidden', gap: 15 },
+    heroBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#FFFFFF12',
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 20,
+    },
+    heroBadgeText: { fontFamily: fonts.bold, fontSize: 8, letterSpacing: 1.25, color: '#E7D8AD' },
+    minutes: { fontFamily: fonts.body, color: '#C6D3C2', fontSize: 10 },
+    heroTitle: {
+      fontFamily: fonts.serif,
+      fontSize: 31,
+      lineHeight: 40,
+      color: '#FFFEF4',
+      maxWidth: 265,
+      marginTop: 10,
+    },
+    heroSubtitle: {
+      fontFamily: fonts.body,
+      color: '#D3DDCB',
+      fontSize: 13,
+      lineHeight: 22,
+      maxWidth: 250,
+    },
+    heroReference: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    heroReferenceText: { color: '#DFE6D8', fontFamily: fonts.medium, fontSize: 12 },
+    heroButton: {
+      backgroundColor: colors.background,
+      borderRadius: 14,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    heroButtonText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
+    orbit: {
+      position: 'absolute',
+      height: 280,
+      width: 280,
+      borderWidth: 1,
+      borderColor: '#DDE2A91A',
+      borderRadius: 140,
+      right: -135,
+      top: 50,
+    },
+    orbit2: {
+      position: 'absolute',
+      height: 220,
+      width: 220,
+      borderWidth: 1,
+      borderColor: '#DDE2A91A',
+      borderRadius: 110,
+      right: -105,
+      top: 80,
+    },
+    sun: {
+      position: 'absolute',
+      height: 75,
+      width: 75,
+      borderRadius: 40,
+      right: -18,
+      top: 130,
+      backgroundColor: '#D2B36D24',
+    },
+    quickCard: { flex: 1, borderRadius: 20, backgroundColor: colors.soft, padding: 18, gap: 10 },
+    quickIcon: {
+      width: 37,
+      height: 37,
+      backgroundColor: colors.line,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    quickTitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+    quickText: { fontFamily: fonts.body, fontSize: 11, lineHeight: 17, color: colors.muted },
+    verseCard: {
+      backgroundColor: colors.peach,
+      borderRadius: 22,
+      padding: 22,
+      gap: 18,
+      borderWidth: 1,
+      borderColor: colors.line,
+    },
+    verse: { fontFamily: fonts.italic, fontSize: 20, lineHeight: 31, color: colors.ink },
+    verseCaption: { fontFamily: fonts.bold, fontSize: 9, color: '#8C7955', letterSpacing: 2 },
+    sectionTitle: { fontFamily: fonts.serif, fontSize: 23, color: colors.ink },
+    nextCard: {
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.line,
+      borderRadius: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: '#FFFFFF80',
+    },
+    nextIcon: {
+      width: 45,
+      height: 49,
+      borderRadius: 15,
+      backgroundColor: '#E7ECE4',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    footer: {
+      fontFamily: fonts.body,
+      fontSize: 10,
+      textAlign: 'center',
+      color: '#8A9485',
+      marginTop: 3,
+    },
+  });

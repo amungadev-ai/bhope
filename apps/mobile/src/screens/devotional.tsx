@@ -5,19 +5,9 @@ import { goBack, navigate, openTab } from '../navigation/actions';
 import { formatReference, type Note, type Verse } from '@bhope/shared';
 import { useApp } from '../lib/context';
 import { getPassage, getPreference, saveNote, setPreference } from '../lib/storage';
-import {
-  Body,
-  Button,
-  colors,
-  fonts,
-  IconButton,
-  Label,
-  LanguageSwitch,
-  Screen,
-  styles,
-  Title,
-} from '../components/ui';
+import { Body, Button, fonts, IconButton, Label, Screen, Title, useUi } from '../components/ui';
 export default function DevotionalScreen() {
+  const { colors, styles } = useUi();
   const { id } = useRoute().params as { id: string };
   const { language, fontSize, devotionals } = useApp();
   const devotional = devotionals.find((item) => item.id === id);
@@ -42,7 +32,7 @@ export default function DevotionalScreen() {
   }, [devotional, language, day, id]);
   if (!devotional)
     return (
-      <Screen>
+      <Screen safeTop>
         <Button onPress={() => openTab('Today')}>Return to today</Button>
         <Body>This devotional is not available offline.</Body>
       </Screen>
@@ -74,7 +64,6 @@ export default function DevotionalScreen() {
       <View style={styles.row}>
         <IconButton name="arrow-back" label="Go back" onPress={() => goBack()} />
         <Label>{sw ? 'NAFASI YA KUTULIA' : 'YOUR QUIET MOMENT'}</Label>
-        <LanguageSwitch />
       </View>
       <View style={{ gap: 12 }}>
         <Label>

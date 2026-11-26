@@ -12,8 +12,16 @@ import {
 import { Linking, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../lib/context';
-import { colors, fonts, Icon, type IconName } from '../components/ui';
-import { navigationRef, type DrawerRoutes, type RootRoutes, type TabRoutes } from './actions';
+import { fonts, Icon, IconButton, useUi, type IconName } from '../components/ui';
+import {
+  navigationRef,
+  openDrawer,
+  openMore,
+  openNote,
+  type DrawerRoutes,
+  type RootRoutes,
+  type TabRoutes,
+} from './actions';
 import Today from '../screens/today';
 import Bible from '../screens/bible';
 import Notes from '../screens/notes';
@@ -22,132 +30,166 @@ import Devotional from '../screens/devotional';
 import Account from '../screens/account';
 import Settings from '../screens/settings';
 import Inspirations from '../screens/inspirations';
+import More from '../screens/more';
+import AiPlan from '../screens/ai-plan';
 import { Giving, DonationHistory } from '../screens/giving';
 import { About, SavedVerses } from '../screens/library';
 const Stack = createNativeStackNavigator<RootRoutes>();
 const Tabs = createBottomTabNavigator<TabRoutes>();
 const Drawer = createDrawerNavigator<DrawerRoutes>();
-function HomeTabs() {
+function HomeHeader() {
+  const { colors } = useUi();
+  const insets = useSafeAreaInsets();
+  return (
+    <View
+      style={{
+        paddingTop: insets.top,
+        backgroundColor: colors.background,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.line,
+      }}
+    >
+      <View
+        style={{
+          height: 54,
+          paddingHorizontal: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <IconButton name="menu-outline" label="Open More menu" onPress={openDrawer} />
+        <Text style={{ fontFamily: fonts.serif, fontSize: 20, color: colors.ink }}>
+          beacon of hope<Text style={{ color: colors.gold }}>.</Text>
+        </Text>
+      </View>
+    </View>
+  );
+}
+function MainTabs() {
   const { language } = useApp();
+  const { colors } = useUi();
   const sw = language === 'sw';
   const insets = useSafeAreaInsets();
+  const labels = {
+    Today: sw ? 'Leo' : 'Today',
+    Bible: sw ? 'Biblia' : 'Bible',
+    Notebook: sw ? 'Daftari' : 'Notebook',
+    Inspirations: sw ? 'Msukumo' : 'Inspiration',
+    More: sw ? 'Zaidi' : 'More',
+  };
   const icons: Record<keyof TabRoutes, IconName> = {
     Today: 'sunny-outline',
     Bible: 'book-outline',
     Notebook: 'journal-outline',
     Inspirations: 'play-circle-outline',
+    More: 'ellipsis-horizontal',
   };
   return (
     <Tabs.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
+        headerShown: true,
+        headerStyle: { backgroundColor: colors.background },
+        headerTitleStyle: { fontFamily: fonts.serif, color: colors.ink, fontSize: 23 },
+        headerShadowVisible: false,
         tabBarActiveTintColor: colors.ink,
-        tabBarInactiveTintColor: '#8A9589',
-        tabBarAccessibilityLabel: {
-          Today: sw ? 'Leo' : 'Today',
-          Bible: sw ? 'Biblia' : 'Bible',
-          Notebook: sw ? 'Daftari' : 'Notebook',
-          Inspirations: sw ? 'Msukumo' : 'Inspirations',
-        }[route.name],
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 10, lineHeight: 14, marginTop: 0 },
+        tabBarInactiveTintColor: colors.muted,
+        tabBarAccessibilityLabel: labels[route.name],
+        title: labels[route.name],
+        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 10, marginTop: 0 },
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopColor: colors.line,
-          height: 78 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: insets.bottom + 9,
+          height: 60 + insets.bottom,
+          paddingTop: 7,
+          paddingBottom: insets.bottom + 6,
         },
-        tabBarIcon: ({ color }) => (
-          <Icon
-            name={icons[route.name]}
-            color={typeof color === 'string' ? color : colors.ink}
-            size={23}
-          />
-        ),
+        tabBarHideOnKeyboard: true,
+        tabBarIcon: ({ color }) => <Icon name={icons[route.name]} color={color} size={22} />,
       })}
     >
-      <Tabs.Screen name="Today" component={Today} options={{ title: sw ? 'Leo' : 'Today' }} />
-      <Tabs.Screen name="Bible" component={Bible} options={{ title: sw ? 'Biblia' : 'Bible' }} />
+      <Tabs.Screen name="Today" component={Today} options={{ header: () => <HomeHeader /> }} />
+      <Tabs.Screen name="Bible" component={Bible} options={{ headerShown: false }} />
       <Tabs.Screen
         name="Notebook"
         component={Notes}
-        options={{ title: sw ? 'Daftari' : 'Notebook' }}
+        options={{
+          headerRight: () => (
+            <View style={{ marginRight: 16 }}>
+              <IconButton name="add" label="Create a note" onPress={() => void openNote()} />
+            </View>
+          ),
+        }}
       />
+      <Tabs.Screen name="Inspirations" component={Inspirations} />
       <Tabs.Screen
-        name="Inspirations"
-        component={Inspirations}
-        options={{ title: sw ? 'Msukumo' : 'Inspirations' }}
+        name="More"
+        component={MoreDrawer}
+        options={{ headerShown: false }}
+        listeners={{
+          tabPress: (event) => {
+            event.preventDefault();
+            openMore('MoreHome');
+          },
+        }}
       />
     </Tabs.Navigator>
   );
 }
 function DrawerContent(props: DrawerContentComponentProps) {
   const { user, language } = useApp();
+  const { colors } = useUi();
   const sw = language === 'sw';
   return (
     <DrawerContentScrollView
       {...props}
-      contentContainerStyle={{ flexGrow: 1, paddingTop: 28, paddingHorizontal: 12 }}
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 12 }}
     >
-      <View style={{ padding: 16, gap: 16 }}>
-        <View style={{ flexDirection: 'row', gap: 9, alignItems: 'center' }}>
-          <Icon name="sunny-outline" size={29} color={colors.green} />
-          <Text style={{ fontFamily: fonts.serif, fontSize: 22, color: colors.ink }}>
-            beacon of hope.
-          </Text>
-        </View>
-        <Text style={{ fontFamily: fonts.body, lineHeight: 21, fontSize: 12, color: colors.muted }}>
-          {sw
-            ? 'Nafasi yako ya kusoma, kutafakari na kukua.'
-            : 'A little space to read, reflect, and grow.'}
+      <View style={{ padding: 18, gap: 10 }}>
+        <Icon name="sunny-outline" color={colors.green} size={28} />
+        <Text style={{ fontFamily: fonts.serif, fontSize: 24, color: colors.ink }}>
+          beacon of hope.
+        </Text>
+        <Text style={{ fontFamily: fonts.body, color: colors.muted }}>
+          {user?.name || (sw ? 'Karibu, msomaji' : 'Welcome, reader')}
         </Text>
       </View>
       <DrawerItemList {...props} />
-      <View
-        style={{ borderTopWidth: 1, borderTopColor: colors.line, marginTop: 20, paddingTop: 12 }}
-      >
-        <DrawerItem
-          label={sw ? 'Tembelea TikTok' : 'Visit our TikTok'}
-          icon={({ color, size }) => (
-            <Icon
-              name="logo-tiktok"
-              color={typeof color === 'string' ? color : colors.ink}
-              size={size}
-            />
-          )}
-          labelStyle={{ fontFamily: fonts.medium, fontSize: 13, color: colors.ink }}
-          onPress={() => {
-            void Linking.openURL('https://www.tiktok.com/@auramultipurposesoap').catch(
-              () => undefined,
-            );
-          }}
-        />
-      </View>
-      <View style={{ marginTop: 'auto', padding: 20, gap: 8 }}>
-        <Text style={{ fontFamily: fonts.medium, color: colors.ink }}>
-          {user ? user.name : sw ? 'Karibu, msomaji' : 'Welcome, reader'}
-        </Text>
-        <Text style={{ fontFamily: fonts.body, fontSize: 11, lineHeight: 19, color: colors.muted }}>
-          {user
-            ? user.email
-            : sw
-              ? 'Kusoma na kuandika ni bure bila akaunti.'
-              : 'Read and write freely. An account is optional.'}
-        </Text>
-        <Text style={{ fontFamily: fonts.body, fontSize: 9, color: '#97A087', marginTop: 10 }}>
-          BEACON OF HOPE · 0.2.0
-        </Text>
-      </View>
+      <DrawerItem
+        label={sw ? 'Tembelea TikTok' : 'Visit our TikTok'}
+        labelStyle={{ fontFamily: fonts.medium, color: colors.ink }}
+        icon={({ size }) => <Icon name="logo-tiktok" size={size} />}
+        onPress={() => {
+          void Linking.openURL('https://www.tiktok.com/@auramultipurposesoap').catch(
+            () => undefined,
+          );
+        }}
+      />
+      <Text style={{ padding: 20, fontFamily: fonts.body, color: colors.muted, fontSize: 11 }}>
+        {sw ? 'Kusoma na kuandika ni bure.' : 'Read and write freely. An account is optional.'}
+      </Text>
     </DrawerContentScrollView>
   );
 }
-function MainDrawer() {
-  const { language, user } = useApp();
+function MoreDrawer() {
+  const { language } = useApp();
+  const { colors } = useUi();
   const sw = language === 'sw';
+  const labels = {
+    MoreHome: sw ? 'Zaidi' : 'More',
+    Account: sw ? 'Akaunti' : 'My account',
+    SavedVerses: sw ? 'Mistari iliyohifadhiwa' : 'Saved verses',
+    AiPlan: sw ? 'Msaada wa kutafakari' : 'AI access & plan',
+    Giving: sw ? 'Saidia huduma' : 'Give a little hope',
+    DonationHistory: sw ? 'Historia ya kutoa' : 'Donation history',
+    Settings: sw ? 'Mapendeleo' : 'Preferences',
+    About: sw ? 'Kuhusu huduma' : 'About & transparency',
+  };
   const icons: Record<keyof DrawerRoutes, IconName> = {
-    HomeTabs: 'sunny-outline',
+    MoreHome: 'grid-outline',
     Account: 'person-outline',
     SavedVerses: 'bookmark-outline',
+    AiPlan: 'sparkles-outline',
     Giving: 'heart-outline',
     DonationHistory: 'receipt-outline',
     Settings: 'options-outline',
@@ -156,71 +198,49 @@ function MainDrawer() {
   return (
     <Drawer.Navigator
       drawerContent={(props) => <DrawerContent {...props} />}
-      screenOptions={({ route }) => ({
-        headerShown: false,
+      screenOptions={({ route, navigation }) => ({
+        title: labels[route.name],
         drawerType: 'front',
-        drawerStyle: { backgroundColor: colors.background, width: 292 },
-        drawerActiveBackgroundColor: '#E6ECDC',
+        swipeEnabled: route.name === 'MoreHome',
+        drawerStyle: { backgroundColor: colors.background, width: 294 },
+        drawerActiveBackgroundColor: colors.soft,
         drawerActiveTintColor: colors.ink,
         drawerInactiveTintColor: colors.muted,
         drawerLabelStyle: { fontFamily: fonts.medium, fontSize: 13 },
-        drawerItemStyle: { borderRadius: 14, marginVertical: 3 },
-        drawerIcon: ({ color, size }) => (
-          <Icon
-            name={icons[route.name]}
-            color={typeof color === 'string' ? color : colors.ink}
-            size={size}
-          />
+        drawerItemStyle: { borderRadius: 14 },
+        drawerIcon: ({ size }) => <Icon name={icons[route.name]} size={size} />,
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.ink,
+        headerTitleStyle: { fontFamily: fonts.serif, fontSize: 22 },
+        headerShadowVisible: false,
+        headerLeft: () => (
+          <View style={{ marginLeft: 14 }}>
+            <IconButton
+              name={route.name === 'MoreHome' ? 'menu-outline' : 'arrow-back'}
+              label={route.name === 'MoreHome' ? 'Open More menu' : 'Back to More'}
+              onPress={() =>
+                route.name === 'MoreHome'
+                  ? navigation.openDrawer()
+                  : navigation.navigate('MoreHome')
+              }
+            />
+          </View>
         ),
       })}
     >
-      <Drawer.Screen
-        name="HomeTabs"
-        component={HomeTabs}
-        options={{ title: sw ? 'Nafasi yako ya leo' : 'Your daily space' }}
-      />
-      <Drawer.Screen
-        name="Account"
-        component={Account}
-        options={{
-          title: user
-            ? sw
-              ? 'Akaunti yangu'
-              : 'My account'
-            : sw
-              ? 'Ingia / Jisajili'
-              : 'Sign in / Create account',
-        }}
-      />
-      <Drawer.Screen
-        name="SavedVerses"
-        component={SavedVerses}
-        options={{ title: sw ? 'Mistari niliyohifadhi' : 'Saved verses' }}
-      />
-      <Drawer.Screen
-        name="Giving"
-        component={Giving}
-        options={{ title: sw ? 'Saidia huduma' : 'Give a little hope' }}
-      />
-      <Drawer.Screen
-        name="DonationHistory"
-        component={DonationHistory}
-        options={{ title: sw ? 'Historia ya kutoa' : 'Donation history' }}
-      />
-      <Drawer.Screen
-        name="Settings"
-        component={Settings}
-        options={{ title: sw ? 'Mapendeleo' : 'Reading preferences' }}
-      />
-      <Drawer.Screen
-        name="About"
-        component={About}
-        options={{ title: sw ? 'Kuhusu huduma' : 'About & transparency' }}
-      />
+      <Drawer.Screen name="MoreHome" component={More} />
+      <Drawer.Screen name="Account" component={Account} />
+      <Drawer.Screen name="SavedVerses" component={SavedVerses} />
+      <Drawer.Screen name="AiPlan" component={AiPlan} />
+      <Drawer.Screen name="Giving" component={Giving} />
+      <Drawer.Screen name="DonationHistory" component={DonationHistory} />
+      <Drawer.Screen name="Settings" component={Settings} />
+      <Drawer.Screen name="About" component={About} />
     </Drawer.Navigator>
   );
 }
 export function AppNavigation() {
+  const { colors } = useUi();
   return (
     <NavigationContainer
       ref={navigationRef}
@@ -241,20 +261,22 @@ export function AppNavigation() {
           screens: {
             Main: {
               screens: {
-                HomeTabs: {
+                Today: '',
+                Bible: 'bible',
+                Notebook: 'notes',
+                Inspirations: 'inspirations',
+                More: {
                   screens: {
-                    Today: '',
-                    Bible: 'bible',
-                    Notebook: 'notes',
-                    Inspirations: 'inspirations',
+                    MoreHome: 'more',
+                    Giving: 'give',
+                    DonationHistory: 'giving-history',
+                    Settings: 'settings',
+                    SavedVerses: 'saved',
+                    About: 'about',
+                    Account: 'profile',
+                    AiPlan: 'ai-plan',
                   },
                 },
-                Giving: 'give',
-                DonationHistory: 'giving-history',
-                Settings: 'settings',
-                SavedVerses: 'saved',
-                About: 'about',
-                Account: 'profile',
               },
             },
             NoteEditor: 'note/:id',
@@ -268,11 +290,31 @@ export function AppNavigation() {
       <Stack.Navigator
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
       >
-        <Stack.Screen name="Main" component={MainDrawer} />
+        <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="NoteEditor" component={NoteEditor} getId={({ params }) => params.id} />
         <Stack.Screen name="Devotional" component={Devotional} />
         <Stack.Screen name="BibleReader" component={Bible} />
-        <Stack.Screen name="Account" component={Account} />
+        <Stack.Screen
+          name="AiPlan"
+          component={AiPlan}
+          options={{
+            headerShown: true,
+            title: 'AI access & plan',
+            headerTintColor: colors.ink,
+            headerStyle: { backgroundColor: colors.background },
+          }}
+        />
+        <Stack.Screen
+          name="Account"
+          component={Account}
+          options={{
+            headerShown: true,
+            title: 'Account',
+            headerTintColor: colors.ink,
+            headerStyle: { backgroundColor: colors.background },
+            headerTitleStyle: { fontFamily: fonts.serif },
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

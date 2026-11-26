@@ -45,6 +45,7 @@ interface Overview {
 }
 import { api } from './api';
 import { InspirationStudio } from './inspirations';
+import { AiAccessStudio } from './ai-access';
 import { GivingStudio } from './giving';
 const emptyText = (): DevotionalText => ({
   title: '',
@@ -83,9 +84,9 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'overview' | 'library' | 'users' | 'inspirations' | 'giving'>(
-    'overview',
-  );
+  const [tab, setTab] = useState<
+    'overview' | 'library' | 'users' | 'inspirations' | 'giving' | 'ai-access'
+  >('overview');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [editing, setEditing] = useState<Entry | null>(null);
@@ -266,6 +267,18 @@ function App() {
             <BookOpen size={18} />
             Inspirations
           </button>
+          {user.role === 'admin' ? (
+            <button
+              className={tab === 'ai-access' ? 'active' : ''}
+              onClick={() => {
+                setTab('ai-access');
+                setEditing(null);
+              }}
+            >
+              <Sparkles size={18} />
+              AI access & plans
+            </button>
+          ) : null}
           {user.role === 'admin' ? (
             <button
               className={tab === 'giving' ? 'active' : ''}
@@ -453,6 +466,8 @@ function App() {
             </>
           ) : tab === 'inspirations' ? (
             <InspirationStudio role={user.role} />
+          ) : tab === 'ai-access' ? (
+            <AiAccessStudio />
           ) : tab === 'giving' ? (
             <GivingStudio />
           ) : tab === 'users' ? (

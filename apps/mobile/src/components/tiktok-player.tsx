@@ -1,12 +1,15 @@
 import { ActivityIndicator, Linking, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { getTikTokPlayerUrl } from '@bhope/shared';
-import { colors } from './ui';
+import { useUi } from './ui';
 export function TikTokPlayer({ url, onError }: { url: string; onError: () => void }) {
+  const { colors } = useUi();
   const player = getTikTokPlayerUrl(url);
   if (!player) return null;
   return (
-    <View style={{ height: 450, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EEF0E5' }}>
+    <View
+      style={{ height: 450, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.soft }}
+    >
       <WebView<object>
         source={{ uri: player }}
         javaScriptEnabled

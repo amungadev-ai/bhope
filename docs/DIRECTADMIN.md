@@ -129,6 +129,12 @@ The schema contains users, hashed sessions, devotionals, private note records, d
 
 ## 6. Restart and verify
 
+On startup, `app.cjs` records `BOOT`, module-loading progress, and fatal error codes/messages in **`hope_api/startup.log`**, with owner-only permissions. The same diagnostics go to the process console. Passwords, keys, secrets, and tokens present in the process environment are redacted, and error objects are not dumped. This log is outside the `public/` document root. `MODULE_LOADED` confirms module evaluation, while the health request below verifies the running service and database.
+
+For an existing deployment with an opaque 503, upload only the current **`apps/api/app.cjs`** from your checkout to **`hope_api/app.cjs`**; no rebuild or dependency installation is needed for that file. Restart the Node.js application, request `/api/v1/health` to trigger startup, and read `startup.log` in File Manager. Share only the latest diagnostic lines. If no log appears, check the manager's configured Passenger/error log; the startup entry may not have run, or the process may lack write permission. CloudLinux's Node.js page can also expose a Passenger log path, depending on the host configuration.
+
+Common codes include `ERR_MODULE_NOT_FOUND` (an uploaded file or installed dependency is unavailable), `ER_ACCESS_DENIED_ERROR` (database authentication), `ER_DBACCESS_DENIED_ERROR` (database privileges), `ER_BAD_DB_ERROR` (database name), `ER_NO_SUCH_TABLE` (schema/table selection), and `ECONNREFUSED` (database host/port or listener refusal). Use the actual message and context to diagnose it. A generic web-server 503 alone does not identify which of these failed.
+
 - `GET /api/v1/health` returns `{"status":"ok","service":"beacon-of-hope-api"}` after checking the database.
 - `/console/` opens the editorial studio.
 - Admin/editor sign-in works, and readers cannot access staff endpoints.

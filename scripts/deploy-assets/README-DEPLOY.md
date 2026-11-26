@@ -10,24 +10,31 @@ the Node manager. The full reference lives in the repository at
 | ------------------------ | ------- |
 | `app.cjs`, `dist/`, `package.json` | The compiled API (startup file is `app.cjs`) |
 | `public/console/`        | The editorial studio, served at `/console/` |
-| `migrations/`            | SQL migrations (already applied by the file below) |
-| `database/bhope-mariadb-schema.sql` | **Import this once in phpMyAdmin** |
-| `.env`                   | Pre-filled config — you only add the DB name and password |
+| `migrations/`            | SQL migrations used by the migration and account tools |
+| `database/bhope-mariadb-schema.sql` | Combined schema for manual phpMyAdmin setup |
 | `.env.example`           | Full settings reference |
-| `node_modules/`          | Backend dependencies, already vendored |
 | `.htaccess`              | Passenger template for the document root |
-| `restart.php`            | One-click Passenger restart from the browser |
-| `diag.php`               | One-off server info (delete after use) |
+| `restart.php`, `diag.php` | Optional maintenance helpers; keep outside `public/` |
 | `restart.sh`             | Restart helper, for SSH sessions if you ever have one |
+
+The repository's `npm run deploy:prepare` command excludes the real `.env`
+and does not vendor `node_modules`. A separately prepared private bundle
+may include them; do not assume that every generated ZIP does.
 
 ## Deploy, step by step
 
 ### 1. Upload and extract
 
-In the File Manager, open the application folder (`hope_api`). Delete any
-older copy first, then upload this ZIP and use **Extract**. Check that
+In the File Manager, open the application folder (`hope_api`). Upload the
+portable ZIP and use **Extract**, replacing the generated application files.
+Preserve the existing private `.env` and the Node manager's `node_modules`
+folder or link. Check that
 `app.cjs`, `package.json`, `dist/`, and `public/` sit directly inside
 `hope_api` — not inside an extra nested folder.
+
+Keep the domain document root at `hope_api/public`, separate from the
+application root. Remove uploaded ZIPs from the host once extraction is
+verified.
 
 ### 2. Import the database schema (phpMyAdmin)
 
@@ -35,24 +42,38 @@ older copy first, then upload this ZIP and use **Extract**. Check that
 2. **Import** → choose `database/bhope-mariadb-schema.sql` → **Go**.
 3. Success looks like: 12 statements executed, tables `users`, `sessions`,
    `devotionals`, `notes`, `daily_ai_usage`, `audit_events`, `inspirations`,
-   `donations`, `ai_lifetime_usage`, `ai_access_audit` exist, and the
-   `devotionals` table has 2 rows.
-4. The import is idempotent — re-running it changes nothing.
+   `donations`, `ai_access`, `ai_access_events` exist. An empty devotional
+   library receives two sample devotionals.
+4. Existing tables and content are preserved. If the three original SQL
+   migrations were already imported, there is no need to import them again.
+   `CREATE TABLE IF NOT EXISTS` does not upgrade an existing table's columns.
 
 ### 3. Fill in `.env`
 
-Open `.env` (inside `hope_api`) in the File Manager editor and set:
+For an existing deployment, retain the working `.env`. For a fresh setup,
+copy `.env.example` to `.env` inside `hope_api`, alongside `app.cjs`, and
+configure at least:
 
 ```dotenv
-DB_NAME=<your database name, from the phpMyAdmin sidebar>
-DB_PASSWORD=<your database password>
+NODE_ENV=production
+APP_URL=https://bhope-api.billucsolutions.co.ke
+ALLOWED_ORIGINS=https://bhope-api.billucsolutions.co.ke
+DB_DRIVER=mysql
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=jobready_bhope_db
+DB_USER=jobready_bhope_db_admin
+DB_PASSWORD="REPLACE_PRIVATELY_WITH_THE_DATABASE_PASSWORD"
 ```
 
-Everything else is pre-filled for `https://bhope-api.billucsolutions.co.ke`
-with `DB_DRIVER=mysql`, `NODE_ENV=production`, `TRUST_PROXY=1`. If phpMyAdmin
-shows the database only via a UNIX socket and connections fail, also set
-`DB_SOCKET=/var/lib/mysql/mysql.sock` (check the phpMyAdmin home page for
-the exact path). Save with permissions `600`.
+Save with permissions `600`. The API and setup scripts load this file
+automatically. Panel environment values override matching `.env` values;
+remove conflicting duplicates. Set `TRUST_PROXY` only after confirming the
+host's proxy configuration, as described in `docs/DIRECTADMIN.md`.
+
+If TCP connections fail and the host confirms socket access, set
+`DB_SOCKET=/var/lib/mysql/mysql.sock` using the host's actual socket path.
+phpMyAdmin using a socket does not itself mean that TCP is unavailable.
 
 ### 4. Register the Node application
 
@@ -60,90 +81,93 @@ In the Node manager ("Setup Node.js App" / Node selector):
 
 | Setting           | Value |
 | ----------------- | ----- |
-| Node version      | 24 LTS (any 22.13+ works; mysql needs only 18+) |
-| Application root  | `hope_api` (the folder with `app.cjs`) |
+| Node version      | Node.js 24 (the project's minimum supported version) |
+| Application root  | `domains/bhope-api.billucsolutions.co.ke/hope_api` relative to the hosting account's home |
 | Application URL   | the domain root |
 | Application mode  | Production |
 | Startup file      | `app.cjs` |
 
-If the panel has no Node manager, put the `.htaccess` from this package into
-the document root (`hope_api/public/`) and fill in the two values explained
-in its comments (`PassengerAppRoot`, `PassengerNodejs`). `diag.php` prints
-both paths — upload it into `public/` and open it in the browser once.
+Use the Node manager's existing working mapping. The `.htaccess` template
+is an alternative only when the host provides Passenger and requires manual
+configuration. Confirm `PassengerAppRoot` and `PassengerNodejs` with the
+host before using it; do not overwrite configuration managed by the panel.
 
 ### 5. Dependencies
 
-`node_modules/` is already included. If the Node manager shows a
-**Run npm install** button, run it anyway — some managers keep their own
-dependency folder and this keeps both in sync.
+Use **Run npm install** for a fresh installation or changed backend
+dependencies. The standard generated package contains a backend-only
+`package.json`; it does not contain `node_modules`. Shared project code is
+included through relative imports, without a workspace package link.
+Preserve any dependency folder or symlink managed by the host.
 
 ### 6. Restart and verify
 
-1. Open `restart.php` in the browser (copy it into `public/` first if your
-   document root is `hope_api/public`) — or click **Restart** in the Node
-   manager.
+1. Click **Restart** in the Node manager. Alternatively, use File Manager to
+   create or update `hope_api/tmp/restart.txt`, Passenger's restart marker.
+   Keep the PHP maintenance helpers outside the public document root.
 2. `https://bhope-api.billucsolutions.co.ke/api/v1/health` should return
-   `{"status":"ok","db":"ok","service":"beacon-of-hope-api"}`.
+   `{"status":"ok","service":"beacon-of-hope-api"}`.
 3. `https://bhope-api.billucsolutions.co.ke/api/v1/devotionals` should list
-   the two seeded devotionals.
+   published devotionals. A fresh, empty library is seeded with two samples.
 4. `/console/` opens the editorial studio.
-5. Delete `diag.php` (and `restart.php` if you prefer) once everything works.
+5. Confirm `/.env` and `/startup.log` cannot be downloaded.
 
 ### 7. Create the first admin account
 
 If the Node manager offers **Run JS Script**: temporarily add to `.env`:
 
 ```dotenv
-CREATE_USER_EMAIL=you@example.com
-CREATE_USER_NAME=Your Name
+CREATE_USER_EMAIL=""
+CREATE_USER_NAME=""
 CREATE_USER_ROLE=admin
-CREATE_USER_PASSWORD=a-new-password-10-plus-chars
+CREATE_USER_PASSWORD=""
 ```
 
-Run the `user:create` script, verify the sign-in works at `/console/`, then
-**remove all four lines** from `.env` and restart. Without "Run JS Script",
+Fill the empty values privately with your email, display name, and a new
+password of 10–128 characters. Select **user:create** in **Run JS Script**
+and leave **Arguments empty**. Success reports
+`Created admin account for <your email>.` with return code `0`.
+
+**Remove all four temporary lines** from `.env`, save, and restart. Sign in
+at `https://bhope-api.billucsolutions.co.ke/console/`. An existing account is
+not reset or promoted by re-running this command. Without **Run JS Script**,
 ask the host to run it once, or use SSH if you get access later.
 
 ## Troubleshooting
 
-- **`Can't acquire lock for app: .../hope_api`** and/or the Node manager shows
-  **`Cannot read properties of null (reading 'details')`** — Passenger tried
-  to start the app repeatedly and the process exited instantly every time
-  (each dead spawn leaves a stale lock, and the manager UI cannot read a
-  dead process's details). Fix the underlying crash, then Restart in the
-  manager. In order:
+- **`Can't acquire lock for app: .../hope_api`** or
+  **`Cannot read properties of null (reading 'details')`** — these panel
+  messages alone do not identify the cause. Check the application's startup
+  diagnostics and the hosting manager's state:
   1. Read `hope_api/startup.log` in the File Manager — the app appends the
      exact failure there (secrets redacted).
   2. Confirm `app.cjs`, `package.json`, `dist/`, `.env`, `node_modules/`,
      and `public/` sit DIRECTLY inside `hope_api` — a nested folder from a
      zip extraction is the most common cause.
-  3. Confirm the manager has only ONE app entry for `hope_api` (duplicates
-     fight over the same lock) and no `.htaccess` with `PassengerAppRoot`
-     sits in the document root while the manager is registering the app —
-     use ONE registration path, never both.
-  4. Restart. A lock older than ~10 minutes may need a second Restart, or
-     ask the host to restart Apache/clear Passenger instance directories.
-- **503 on every `/api` call** — the Node process is not booting. The exact
-  reason is in `hope_api/startup.log` and the panel error log (DirectAdmin:
-  File Manager → `~/domains/<domain>/logs/<domain>.error.log`).
+  3. Confirm there is one app registration for `hope_api` and its mapping
+     matches the paths above. Avoid a conflicting manual Passenger template.
+  4. Restart through the panel. If the manager remains locked, ask the host
+     to inspect the lock and Passenger process state.
+- **503 on `/api` calls** — check `hope_api/startup.log` and the panel's
+  configured Passenger/error log. Startup failures, routing, or hosting
+  resource limits can cause a 503; the response alone does not establish why.
 - **200 with `{"status":"degraded","db":"error","code":"..."}`** — the
   backend IS running but the database is not ready. The `code` says which:
-  `ER_BAD_DB_ERROR` → `DB_NAME` is wrong; `ER_ACCESS_DENIED_ERROR` →
-  `DB_USER`/`DB_PASSWORD` are wrong; `ECONNREFUSED` → no TCP listener, set
-  `DB_SOCKET=/var/lib/mysql/mysql.sock` (path from the phpMyAdmin home
-  page); missing tables → import the schema (step 2). The API keeps serving
-  so you can iterate without crash loops.
+  `ER_BAD_DB_ERROR` → check `DB_NAME`; `ER_ACCESS_DENIED_ERROR` → check
+  `DB_USER`, `DB_PASSWORD`, and account access; `ECONNREFUSED` → verify the
+  host/port or confirmed socket path. The health check tests connectivity;
+  if a content or staff route reports missing tables, check the schema
+  separately. The server stays running during database connection failures.
 - **403 `This origin is not allowed.`** — a browser client from another
   domain is calling the API; add that origin to `ALLOWED_ORIGINS`.
-- After ANY change: open `restart.php`, wait ~10 seconds, retry.
+- Restart through the Node manager after code or `.env` changes, then retry.
 
 ## Notes
 
-- `health` answers 200 even when the database is down (`status: degraded`)
-  so you can always tell a boot failure (503) from a database failure (200
-  + degraded).
-- The SQLite fallback in this build also works (needs Node 22.13+) and now
-  writes to `.local/api.sqlite` inside the app root; `DB_SQLITE_PATH`
-  overrides it. MySQL remains the production driver.
-- Merchant keys (M-Pesa, Paystack) are intentionally blank; giving stays
-  disabled until they are set — see `docs/GIVING.md` in the repository.
+- `health` answers HTTP 200 even during a database failure. Monitoring must
+  check the JSON `status` value, not only the HTTP response code.
+- SQLite is for local development and tests; production requires MySQL.
+  `DB_SQLITE_PATH` overrides the local SQLite file location.
+- The standard `.env.example` has blank merchant keys. An existing private
+  `.env` may already enable AI or giving. Configuration flags do not verify
+  provider connectivity; follow `docs/GIVING.md` before enabling real charges.

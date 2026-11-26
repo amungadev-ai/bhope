@@ -7,10 +7,10 @@
 #
 # TWO VALUES TO SET:
 #   1) PassengerAppRoot — absolute path of the folder containing app.cjs
-#      (hope_api). Confirm it in the File Manager address bar or via diag.php.
-#   2) PassengerNodejs — real Node binary from diag.php (`which node` output).
-#      Node 24 LTS is the project target; 22.13+ is the minimum for sqlite
-#      (mysql runs on 18+). Delete this line to use the host default.
+#      (hope_api). Confirm it in File Manager or with your hosting provider.
+#   2) PassengerNodejs — Node binary path confirmed by the hosting provider.
+#      The project requires Node.js 24 or newer. Prefer the Node manager's
+#      supported mapping when available; keep maintenance scripts private.
 
 <IfModule mod_passenger.c>
     PassengerEnabled On

@@ -22,7 +22,7 @@ To zip an already prepared package again without rebuilding:
 npm run deploy:zip
 ```
 
-Upload the archive through DirectAdmin File Manager and extract its contents into the application root. Check that `package.json`, `app.cjs`, `dist/`, and `public/` are directly inside `hope_api`, rather than inside an extra `deploy-api` directory. The settings are documented here; enter secrets in the Node manager instead of adding them to the archive.
+Upload the archive through DirectAdmin File Manager and extract its contents into the application root. Check that `package.json`, `app.cjs`, `dist/`, and `public/` are directly inside `hope_api`, rather than inside an extra `deploy-api` directory. Preserve the host's existing private `.env` and the Node manager's `node_modules` link. Enter secrets in the host's private `.env` as described below, rather than adding them to the archive.
 
 If File Manager lists a name such as `public\console\index.html` as a single file, the archive used Windows backslashes and the extractor treated them as filename characters. This affects all subdirectories, including the API and SQL migrations. Move the incorrectly extracted files and old archives to Trash, upload the complete `bhope-api-portable.zip`, and extract it directly into `hope_api`. Confirm you can open the real folders `public` → `console` and see `index.html`. Repack the full deployment with the command above; creating an empty `public` folder would leave the compiled dashboard missing.
 
@@ -67,6 +67,7 @@ DB_NAME=jobready_bhope_db
 DB_USER=jobready_bhope_db_admin
 DB_PASSWORD="SET_THE_DATABASE_PASSWORD_PRIVATELY_ON_THE_HOST"
 DB_POOL_SIZE=5
+DB_SOCKET=
 ALLOWED_ORIGINS=https://bhope-api.billucsolutions.co.ke
 TRUST_PROXY=0
 ALLOW_REGISTRATION=true
@@ -90,6 +91,8 @@ Set `TRUST_PROXY` only after confirming the host's reverse-proxy topology. If it
 Leave merchant keys blank during initial deployment. The mobile app shows giving as unavailable until the relevant credentials and HTTPS `APP_URL` are configured. Configure test/sandbox accounts first and follow [giving setup](GIVING.md) before real charges. Never put merchant secrets in the mobile environment. `DONATION_URL` is a legacy optional configuration field; the new giving screen uses the API.
 
 The database account should be restricted to this app's database. Use `utf8mb4` for Unicode. The migrations explicitly create InnoDB/utf8mb4 tables on MySQL. No production password is stored in this repository.
+
+`DB_SOCKET` is optional. Set it to a host-confirmed Unix socket path, such as `/var/lib/mysql/mysql.sock`, if TCP access is unavailable. A socket connection in phpMyAdmin does not by itself establish whether TCP is available to the Node application.
 
 ## 5. Initialize the database and staff account
 

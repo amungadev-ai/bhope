@@ -19,6 +19,9 @@ export async function openDatabase(config: Config, sqlitePath?: string): Promise
       database: config.DB_NAME,
       user: config.DB_USER,
       password: config.DB_PASSWORD,
+      // Some shared hosts expose MariaDB only through a UNIX socket
+      // (e.g. /var/lib/mysql/mysql.sock); DB_SOCKET switches to it.
+      ...(config.DB_SOCKET ? { socketPath: config.DB_SOCKET } : {}),
       connectionLimit: config.DB_POOL_SIZE,
       waitForConnections: true,
       queueLimit: 30,
@@ -41,7 +44,15 @@ export async function openDatabase(config: Config, sqlitePath?: string): Promise
       },
     };
   }
-  const path = sqlitePath ?? fileURLToPath(new URL('../../../.local/api.sqlite', import.meta.url));
+  // The compiled file lives in dist/, so ../.local lands inside the app
+  // root, which is writable on shared hosting. The old default resolved
+  // three directories above this file, outside the account. DB_SQLITE_PATH
+  // in .env overrides it (absolute path, or relative to dist/).
+  const path =
+    sqlitePath ??
+    (config.DB_SQLITE_PATH
+      ? fileURLToPath(new URL(config.DB_SQLITE_PATH, import.meta.url))
+      : fileURLToPath(new URL('../.local/api.sqlite', import.meta.url)));
   if (path !== ':memory:') await mkdir(dirname(path), { recursive: true });
   const { DatabaseSync } = await import('node:sqlite');
   const sqlite = new DatabaseSync(path);

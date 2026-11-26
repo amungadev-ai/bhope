@@ -24,6 +24,8 @@ const schema = z.object({
   DB_USER: z.string().default('jobready_bhope_db_admin'),
   DB_PASSWORD: z.string().default(''),
   DB_POOL_SIZE: z.coerce.number().int().min(1).max(20).default(5),
+  DB_SOCKET: z.string().default(''),
+  DB_SQLITE_PATH: z.string().default(''),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:8081'),
   TRUST_PROXY: z.coerce.number().int().min(0).max(3).default(0),
   ALLOW_REGISTRATION: z.enum(['true', 'false']).default('true'),

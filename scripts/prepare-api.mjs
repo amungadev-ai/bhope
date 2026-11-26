@@ -12,6 +12,9 @@ await cp(`${root}/apps/api/dist`, `${output}/dist`, { recursive: true });
 await cp(`${root}/apps/api/migrations`, `${output}/migrations`, { recursive: true });
 await cp(`${root}/apps/api/app.cjs`, `${output}/app.cjs`);
 await cp(`${root}/apps/api/.env.example`, `${output}/.env.example`);
+for (const asset of ['.htaccess', 'restart.php', 'diag.php', 'restart.sh', 'README-DEPLOY.md'])
+  await cp(`${root}/scripts/deploy-assets/${asset}`, `${output}/${asset}`);
+await cp(`${root}/scripts/deploy-assets/database`, `${output}/database`, { recursive: true });
 await cp(`${root}/apps/dashboard/dist`, `${output}/public/console`, { recursive: true });
 await cp(`${root}/packages/shared`, `${output}/packages/shared`, { recursive: true });
 const packageJson = JSON.parse(await readFile(`${root}/apps/api/package.json`, 'utf8'));

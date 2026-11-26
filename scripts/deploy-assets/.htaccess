@@ -1,0 +1,20 @@
+# Passenger Node.js app — Beacon of Hope API
+#
+# This template belongs in the DOMAIN DOCUMENT ROOT (hope_api/public/ by
+# default). The app root and document root are different: only public/ is
+# web-served. If your host's Node manager ("Setup Node.js App") manages the
+# mapping itself, do not use this file — set the same values in its UI.
+#
+# TWO VALUES TO SET:
+#   1) PassengerAppRoot — absolute path of the folder containing app.cjs
+#      (hope_api). Confirm it in the File Manager address bar or via diag.php.
+#   2) PassengerNodejs — real Node binary from diag.php (`which node` output).
+#      Node 24 LTS is the project target; 22.13+ is the minimum for sqlite
+#      (mysql runs on 18+). Delete this line to use the host default.
+
+<IfModule mod_passenger.c>
+    PassengerEnabled On
+    PassengerAppRoot "/home/YOUR_USERNAME/domains/bhope-api.billucsolutions.co.ke/hope_api"
+    PassengerStartupFile app.cjs
+    PassengerNodejs "/usr/local/bin/node"
+</IfModule>

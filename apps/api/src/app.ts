@@ -150,8 +150,24 @@ export function createApp(
   app.use('/api/v1', inspirationRoutes(db, authenticate, staff));
   app.use('/api/v1', paymentRoutes(config, db, authenticate, providerFetch));
   app.get('/api/v1/health', async (_req, res) => {
-    await db.all('SELECT 1 AS ok');
-    res.json({ status: 'ok', service: 'beacon-of-hope-api' });
+    // Graceful on purpose: a degraded database still answers 200 so hosting
+    // health panels and the mobile app can tell "backend up, database down"
+    // apart from a dead Passenger process (503).
+    try {
+      await db.all('SELECT 1 AS ok');
+      res.json({ status: 'ok', service: 'beacon-of-hope-api' });
+    } catch (error) {
+      // Only the error CODE is exposed (ER_BAD_DB_ERROR, ER_ACCESS_DENIED_ERROR,
+      // ECONNREFUSED, ...) — actionable without leaking database names.
+      const err = error as { code?: string };
+      console.error(`Health check failed: ${err.code || (error instanceof Error ? error.message : error)}`);
+      res.json({
+        status: 'degraded',
+        db: 'error',
+        code: err.code || 'UNKNOWN',
+        service: 'beacon-of-hope-api',
+      });
+    }
   });
   app.get('/api/v1/config', (_req, res) =>
     res.json({

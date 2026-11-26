@@ -8,6 +8,7 @@ coverage/
 .env.*
 !.env.example
 .local/
+apps/mobile/assets/private-bible/
 *.xml
 *.sqlite
 *.sqlite-*

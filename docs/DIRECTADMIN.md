@@ -7,11 +7,20 @@ These instructions prepare the existing host. No live hosting account has been a
 ## 1. Build on your computer
 
 ```sh
-npm ci
 npm run deploy:prepare
 ```
 
+Run this from the repository root on your computer. For a fresh clone, install dependencies with `npm ci` first. An existing checkout with unchanged dependencies does not need another install.
+
 Upload the **contents** of `.local/deploy-api/` into `hope_api`. The package contains compiled API code, the compiled studio, SQL migrations, staff tools, shared JavaScript, and a backend-only package.json. It contains no `.env`, local databases, or complete licensed Bible texts.
+
+On Windows, you can zip the prepared contents for File Manager upload:
+
+```powershell
+Compress-Archive -Path .\.local\deploy-api\* -DestinationPath .\.local\bhope-api.zip -Force
+```
+
+Upload the archive through DirectAdmin File Manager and extract its contents into the application root. Check that `package.json`, `app.cjs`, `dist/`, and `public/` are directly inside `hope_api`, rather than inside an extra `deploy-api` directory. The settings are documented here; enter secrets in the Node manager instead of adding them to the archive.
 
 ## 2. Configure the domain and Node application
 
@@ -78,6 +87,10 @@ The database account should be restricted to this app's database. Use `utf8mb4` 
 
 ## 5. Initialize the database and staff account
 
+Choose the route supported by your hosting account. The account tool creates a new account only; running it again with the same email does not reset a password or change an existing user's role.
+
+### With Terminal or SSH
+
 In the deployed application directory, with its environment loaded:
 
 ```sh
@@ -85,7 +98,28 @@ npm run db:migrate
 npm run user:create -- --email you@example.com --name "Your Name" --role admin
 ```
 
-The account tool prompts for a hidden password. It also supports `CREATE_USER_PASSWORD` for a temporary secure environment injection; do not put passwords in command-line arguments or source files. The schema contains users, hashed sessions, devotionals, private note records, daily AI usage counters, role-change audit events, curated inspirations, donations, lifetime AI usage, and access-adjustment audit records. Migrations run in filename order; the new tables do not replace existing notes or accounts. Two original sample devotionals are seeded only when the library is empty.
+The account tool prompts for a hidden password in an interactive terminal. It also supports `CREATE_USER_PASSWORD` for a temporary secure environment injection; do not put passwords in command-line arguments or source files.
+
+### With File Manager and the Node.js manager
+
+When the Node.js application page offers **Run npm install**, **Run JS Script**, and environment-variable controls, SSH is not required for these setup steps. Upload and extract the compiled package, configure the application and database settings above, and run the dependency installation from the panel.
+
+Temporarily add these environment variables to the Node.js application:
+
+| Variable               | Value                                                               |
+| ---------------------- | ------------------------------------------------------------------- |
+| `CREATE_USER_EMAIL`    | Your staff email address                                            |
+| `CREATE_USER_NAME`     | Your display name                                                   |
+| `CREATE_USER_ROLE`     | `admin` for the first account; `editor` for a later editor account  |
+| `CREATE_USER_PASSWORD` | A new password of 10–128 characters, entered privately in the panel |
+
+Save the variables. Use **Run JS Script** to run `db:migrate`, then `user:create`. These are script names from the packaged `package.json`; do not put the password into the script command or its arguments. The command reads the temporary variables and reports the created account's email and role. If a required setting is missing, it exits with the missing variable names rather than waiting for input the panel cannot provide.
+
+After the account is created, remove all four `CREATE_USER_*` variables and save. Restart the application, then sign into `/console/` with that email and password. The temporary setup variables are not needed for normal operation. There is no public account-bootstrap endpoint.
+
+If the panel does not provide **Run JS Script**, ask the hosting provider to enable that capability, provide an account Terminal, or confirm SSH access. A connection timeout or refusal before authentication requires checking the SSH hostname/IP, port, firewall/IP restrictions, and account access. Creating or authorizing a new key does not make a closed or unreachable port accessible. DirectAdmin's SSH-key screen and its separate Login Keys feature are not a browser terminal.
+
+The schema contains users, hashed sessions, devotionals, private note records, daily AI usage counters, role-change audit events, curated inspirations, donations, lifetime AI usage, and access-adjustment audit records. Migrations run in filename order; the new tables do not replace existing notes or accounts. Two original sample devotionals are seeded only when the library is empty.
 
 ## 6. Restart and verify
 

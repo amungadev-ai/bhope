@@ -95,6 +95,8 @@ npm run deploy:prepare
 
 The first command runs typechecks, mobile lint, reference/parser tests, API authorization and privacy tests, and production API/studio builds. The second creates a minimal shared-hosting package in `.local/deploy-api/`, without requiring Expo on the server. See [DirectAdmin setup](docs/DIRECTADMIN.md) and [architecture and current scope](docs/ARCHITECTURE.md).
 
+DirectAdmin deployment can also use File Manager and the Node.js manager's **Run JS Script** controls, including first-admin creation from temporary environment variables. SSH is optional when those controls are available; follow the [setup without a terminal](docs/DIRECTADMIN.md#with-file-manager-and-the-nodejs-manager).
+
 ## Project layout
 
 ```text

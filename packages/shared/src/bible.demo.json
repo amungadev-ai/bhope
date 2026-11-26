@@ -1,0 +1,144 @@
+{
+  "fingerprint": "bhope-public-domain-sample-v1",
+  "sample": true,
+  "versions": [
+    {
+      "id": "en",
+      "name": "English sample · KJV",
+      "copyright": "Public domain KJV text. Development sample, not NIV."
+    },
+    {
+      "id": "sw",
+      "name": "Kiswahili sample",
+      "copyright": "Original development renderings by Beacon of Hope. Not SRUV. Import the supplied XML for SRUV."
+    }
+  ],
+  "verses": [
+    {
+      "version": "en",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 1,
+      "text": "The LORD is my shepherd; I shall not want."
+    },
+    {
+      "version": "en",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 2,
+      "text": "He maketh me to lie down in green pastures: he leadeth me beside the still waters."
+    },
+    {
+      "version": "en",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 3,
+      "text": "He restoreth my soul: he leadeth me in the paths of righteousness for his name's sake."
+    },
+    {
+      "version": "en",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 4,
+      "text": "Yea, though I walk through the valley of the shadow of death, I will fear no evil: for thou art with me; thy rod and thy staff they comfort me."
+    },
+    {
+      "version": "en",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 5,
+      "text": "Thou preparest a table before me in the presence of mine enemies: thou anointest my head with oil; my cup runneth over."
+    },
+    {
+      "version": "en",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 6,
+      "text": "Surely goodness and mercy shall follow me all the days of my life: and I will dwell in the house of the LORD for ever."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 3,
+      "verse": 16,
+      "text": "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."
+    },
+    {
+      "version": "en",
+      "bookId": 50,
+      "chapter": 4,
+      "verse": 6,
+      "text": "Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God."
+    },
+    {
+      "version": "en",
+      "bookId": 50,
+      "chapter": 4,
+      "verse": 7,
+      "text": "And the peace of God, which passeth all understanding, shall keep your hearts and minds through Christ Jesus."
+    },
+    {
+      "version": "sw",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 1,
+      "text": "Bwana ndiye mchungaji wangu; ninapata ninachohitaji katika utunzaji wake."
+    },
+    {
+      "version": "sw",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 2,
+      "text": "Ananipumzisha penye malisho ya kijani na kuniongoza karibu na maji yenye utulivu."
+    },
+    {
+      "version": "sw",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 3,
+      "text": "Anahuisha nafsi yangu na kuniongoza katika njia za haki kwa ajili ya jina lake."
+    },
+    {
+      "version": "sw",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 4,
+      "text": "Hata nikipita katika bonde la giza, sitaogopa, kwa sababu wewe uko nami; mwongozo wako unanifariji."
+    },
+    {
+      "version": "sw",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 5,
+      "text": "Unaniandalia meza mbele ya wanaonipinga; unanipokea kwa ukarimu na kunijaza baraka."
+    },
+    {
+      "version": "sw",
+      "bookId": 19,
+      "chapter": 23,
+      "verse": 6,
+      "text": "Wema na upendo wako vitafuatana nami katika maisha yangu yote, nami nitakaa katika nyumba yako kwa siku nyingi."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 3,
+      "verse": 16,
+      "text": "Mungu aliupenda ulimwengu hata akamtoa Mwana wake wa pekee, ili kila anayemwamini apate uzima wa milele badala ya kupotea."
+    },
+    {
+      "version": "sw",
+      "bookId": 50,
+      "chapter": 4,
+      "verse": 6,
+      "text": "Badala ya kubaki katika wasiwasi, mwelezeni Mungu mahitaji yenu kwa sala na shukrani."
+    },
+    {
+      "version": "sw",
+      "bookId": 50,
+      "chapter": 4,
+      "verse": 7,
+      "text": "Amani ya Mungu, iliyo juu ya ufahamu wetu, italinda mioyo na mawazo yenu katika Kristo Yesu."
+    }
+  ]
+}

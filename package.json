@@ -1,0 +1,33 @@
+{
+  "name": "beacon-of-hope",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "npm run start --workspace=@bhope/mobile --",
+    "android": "npm run android --workspace=@bhope/mobile --",
+    "web": "npm run web --workspace=@bhope/mobile --",
+    "api": "npm run dev --workspace=@bhope/api --",
+    "dashboard": "npm run dev --workspace=@bhope/dashboard --",
+    "bible:import": "node scripts/import-bibles.mjs",
+    "db:migrate": "npm run db:migrate --workspace=@bhope/api",
+    "user:create": "npm run user:create --workspace=@bhope/api --",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspace=@bhope/mobile",
+    "test": "node --test packages/shared/test/*.test.mjs && npm run test --workspace=@bhope/api",
+    "build": "npm run build --workspace=@bhope/api && npm run build --workspace=@bhope/dashboard",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "deploy:prepare": "npm run build && node scripts/prepare-api.mjs",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,js,cjs,css,json}\" \"packages/**/*.{js,mjs,ts,json}\" \"scripts/*.mjs\" \"docs/*.md\" README.md package.json .prettierrc.json"
+  },
+  "devDependencies": {
+    "fast-xml-parser": "^5.12.1",
+    "prettier": "^3.10.1"
+  }
+}

@@ -1,0 +1,46 @@
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(36) PRIMARY KEY,
+  email VARCHAR(254) NOT NULL UNIQUE,
+  name VARCHAR(120) NOT NULL,
+  password_hash TEXT NOT NULL,
+  role VARCHAR(20) NOT NULL DEFAULT 'user',
+  created_at VARCHAR(30) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash VARCHAR(64) PRIMARY KEY,
+  user_id VARCHAR(36) NOT NULL,
+  expires_at VARCHAR(30) NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS devotionals (
+  id VARCHAR(80) PRIMARY KEY,
+  payload MEDIUMTEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'draft',
+  publish_at VARCHAR(30),
+  author_id VARCHAR(36),
+  updated_at VARCHAR(30) NOT NULL,
+  FOREIGN KEY (author_id) REFERENCES users(id)
+);
+CREATE TABLE IF NOT EXISTS notes (
+  id VARCHAR(80) NOT NULL,
+  user_id VARCHAR(36) NOT NULL,
+  payload MEDIUMTEXT NOT NULL,
+  revision INTEGER NOT NULL DEFAULT 1,
+  updated_at VARCHAR(30) NOT NULL,
+  PRIMARY KEY (id, user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS daily_ai_usage (
+  user_id VARCHAR(36) NOT NULL,
+  day VARCHAR(10) NOT NULL,
+  calls INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS audit_events (
+  id VARCHAR(36) PRIMARY KEY,
+  actor_id VARCHAR(36) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  target_id VARCHAR(80) NOT NULL,
+  created_at VARCHAR(30) NOT NULL
+);

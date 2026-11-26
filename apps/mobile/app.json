@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Beacon of Hope",
+    "slug": "beacon-of-hope",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ke.co.billucsolutions.beaconofhope"
+    },
+    "android": {
+      "package": "ke.co.billucsolutions.beaconofhope",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#214D3B"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-sqlite", "expo-secure-store"],
+    "scheme": "beaconofhope"
+  }
+}

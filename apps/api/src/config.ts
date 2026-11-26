@@ -5,6 +5,17 @@ export const apiRoot = fileURLToPath(new URL('../', import.meta.url));
 dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)), quiet: true });
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  APP_URL: z.url().default('http://localhost:4000'),
+  PAYSTACK_SECRET_KEY: z.string().default(''),
+  PAYSTACK_WEBHOOK_SECRET: z.string().default(''),
+  MPESA_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  MPESA_CONSUMER_KEY: z.string().default(''),
+  MPESA_CONSUMER_SECRET: z.string().default(''),
+  MPESA_SHORTCODE: z.string().default(''),
+  MPESA_PASSKEY: z.string().default(''),
+  MPESA_TRANSACTION_TYPE: z
+    .enum(['CustomerPayBillOnline', 'CustomerBuyGoodsOnline'])
+    .default('CustomerPayBillOnline'),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   DB_DRIVER: z.enum(['sqlite', 'mysql']).default('sqlite'),
   DB_HOST: z.string().default('localhost'),

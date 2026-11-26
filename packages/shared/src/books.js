@@ -17,7 +17,7 @@ const rows = [
   ['Nehemiah', 'Nehemia', 13, 'Neh'],
   ['Esther', 'Esta', 10, 'Est|Esth'],
   ['Job', 'Ayubu', 42, 'Ay|Ayu'],
-  ['Psalms', 'Zaburi', 150, 'Psalm|Ps|Psa|Zab'],
+  ['Psalms', 'Zaburi', 150, 'Psalm|Ps|Psa|Psm|Zab|Zb'],
   ['Proverbs', 'Mithali', 31, 'Prov|Pr|Mit'],
   ['Ecclesiastes', 'Mhubiri', 12, 'Eccl|Ecc|Mhu'],
   ['Song of Solomon', 'Wimbo Ulio Bora', 8, 'Song of Songs|Song|Songs|Wim'],
@@ -41,14 +41,14 @@ const rows = [
   ['Matthew', 'Mathayo', 28, 'Matt|Mt|Mat'],
   ['Mark', 'Marko', 16, 'Mk|Mrk'],
   ['Luke', 'Luka', 24, 'Lk|Luk'],
-  ['John', 'Yohana', 21, 'Jn|Jhn|Yoh|Yn'],
+  ['John', 'Yohana', 21, 'Jn|Jhn|Joh|Jhon|Jon|Yoh|Yn|Yohana mtakatifu'],
   ['Acts', 'Matendo ya Mitume', 28, 'Act|Matendo|Mdo'],
   ['Romans', 'Warumi', 16, 'Rom|Ro|Rum'],
-  ['1 Corinthians', '1 Wakorintho', 16, '1 Cor|1Co|1 Kor|1Kor|1Wakorintho'],
+  ['1 Corinthians', '1 Wakorintho', 16, '1 Cor|1Co|1 Kor|1Kor|1Wakorintho|1 Wakorinto'],
   ['2 Corinthians', '2 Wakorintho', 13, '2 Cor|2Co|2 Kor|2Kor|2Wakorintho'],
   ['Galatians', 'Wagalatia', 6, 'Gal'],
   ['Ephesians', 'Waefeso', 6, 'Eph|Efe'],
-  ['Philippians', 'Wafilipi', 4, 'Phil|Php|Flp|Fil'],
+  ['Philippians', 'Wafilipi', 4, 'Phil|Php|Flp|Fil|Phillipians|Philippian'],
   ['Colossians', 'Wakolosai', 4, 'Col|Kol'],
   ['1 Thessalonians', '1 Wathesalonike', 5, '1 Thess|1Th|1 The'],
   ['2 Thessalonians', '2 Wathesalonike', 3, '2 Thess|2Th|2 The'],
@@ -71,5 +71,15 @@ export const books = rows.map(([en, sw, chapters, aliases], index) => ({
   en,
   sw,
   chapters,
-  aliases: [...new Set([en, sw, ...aliases.split('|')])],
+  aliases: [
+    ...new Set([
+      en,
+      sw,
+      ...aliases.split('|'),
+      ...[en, sw].flatMap((name) => {
+        const match = name.match(/^([123]) (.+)$/);
+        return match ? [`${['I', 'II', 'III'][Number(match[1]) - 1]} ${match[2]}`] : [];
+      }),
+    ]),
+  ],
 }));

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { goBack } from '../navigation/actions';
 import { api, apiUrl } from '../lib/api';
 import { clearToken, setToken } from '../lib/session';
 import {
@@ -14,6 +14,7 @@ import {
   styles,
   Title,
 } from '../components/ui';
+import { useApp } from '../lib/context';
 interface User {
   id: string;
   name: string;
@@ -21,6 +22,7 @@ interface User {
   role: string;
 }
 export default function AccountScreen() {
+  const { refreshUser } = useApp();
   const [user, setUser] = useState<User | null>(null);
   const [register, setRegister] = useState(false);
   const [name, setName] = useState('');
@@ -56,6 +58,7 @@ export default function AccountScreen() {
         },
       );
       await setToken(result.token);
+      await refreshUser();
       setUser(result.user);
       setPassword('');
     } catch (failure) {
@@ -69,6 +72,7 @@ export default function AccountScreen() {
     try {
       await api('/auth/logout', { method: 'POST' });
       await clearToken();
+      await refreshUser();
       setUser(null);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not sign out.');
@@ -79,7 +83,7 @@ export default function AccountScreen() {
   return (
     <Screen>
       <View style={styles.row}>
-        <IconButton name="arrow-back" label="Back" onPress={() => router.back()} />
+        <IconButton name="arrow-back" label="Back" onPress={() => goBack()} />
         <Label>BEACON OF HOPE</Label>
         <View style={{ width: 44 }} />
       </View>

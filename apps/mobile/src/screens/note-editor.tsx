@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useRoute } from '@react-navigation/native';
+import { goBack, navigate, openTab, openBible, type RootRoutes } from '../navigation/actions';
 import { extractReferences, formatReference, type Note, type Reference } from '@bhope/shared';
-import { deleteNote, getNote, saveNote } from '../../lib/storage';
-import { useApp } from '../../lib/context';
-import { api } from '../../lib/api';
-import { PassageSheet } from '../../components/passage-sheet';
+import { deleteNote, getNote, saveNote } from '../lib/storage';
+import { useApp } from '../lib/context';
+import { api } from '../lib/api';
+import { ScriptureSheet } from '../components/scripture-sheet';
+import { RichEditor } from '../components/rich-editor';
+import { EditorToolbar } from '../components/editor-toolbar';
+import type { RichEditorHandle } from '../components/rich-editor-types';
 import {
   Body,
   Button,
@@ -18,10 +22,11 @@ import {
   Screen,
   Sheet,
   styles,
-} from '../../components/ui';
+} from '../components/ui';
 export default function NoteScreen() {
-  const { id, kind } = useLocalSearchParams<{ id: string; kind?: string }>();
-  const { language } = useApp();
+  const params = useRoute().params as RootRoutes['NoteEditor'];
+  const { id, kind } = params;
+  const { language, user } = useApp();
   const sw = language === 'sw';
   const [note, setNote] = useState<Note | null>(null);
   const [status, setStatus] = useState('');
@@ -31,7 +36,15 @@ export default function NoteScreen() {
   const [aiText, setAiText] = useState('');
   const [aiError, setAiError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [selectedText, setSelectedText] = useState('');
+  const editor = useRef<RichEditorHandle>(null);
+  const lastInsert = useRef('');
+  useEffect(() => {
+    if (note?.id === id && params.insert && lastInsert.current !== params.insert.nonce) {
+      lastInsert.current = params.insert.nonce;
+      editor.current?.appendText(params.insert.text);
+    }
+  }, [id, note?.id, params.insert]);
   const current = useRef<Note | null>(null);
   const mounted = useRef(true);
   const deleted = useRef(false);
@@ -114,7 +127,7 @@ export default function NoteScreen() {
     try {
       if (timer.current) clearTimeout(timer.current);
       if (current.current) await enqueue(current.current);
-      router.back();
+      goBack();
     } catch {
       setError('Your note could not be saved. Please try again before leaving.');
     }
@@ -125,7 +138,7 @@ export default function NoteScreen() {
       deleted.current = true;
       await queue.current.catch(() => undefined);
       if (note) await deleteNote(note.id);
-      router.replace('/notes');
+      openTab('Notebook');
     } catch {
       deleted.current = false;
       setDialog(null);
@@ -137,8 +150,7 @@ export default function NoteScreen() {
     setBusy(true);
     setAiError('');
     setAiText('');
-    const selected =
-      selection.end > selection.start ? note.body.slice(selection.start, selection.end) : note.body;
+    const selected = selectedText.trim() || note.body;
     try {
       const result = await api<{ text: string }>('/ai/assist', {
         method: 'POST',
@@ -154,7 +166,7 @@ export default function NoteScreen() {
   if (!note)
     return (
       <Screen>
-        <IconButton name="arrow-back" label="Back" onPress={() => router.back()} />
+        <IconButton name="arrow-back" label="Back" onPress={() => goBack()} />
         {error ? <Body>{error}</Body> : <ActivityIndicator color={colors.ink} />}
       </Screen>
     );
@@ -254,7 +266,7 @@ export default function NoteScreen() {
         <View style={styles.row}>
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
             <Icon name="sparkles-outline" size={14} color={colors.green} />
-            <Label>{sw ? 'MAREJEO YA BIBLIA' : 'SCRIPTURE, CONNECTED'}</Label>
+            <Label>{sw ? 'MAREJEO YA BIBLIA' : 'IN THIS NOTE'}</Label>
           </View>
           <Text style={{ fontFamily: fonts.body, fontSize: 9, color: colors.muted }}>OFFLINE</Text>
         </View>
@@ -278,46 +290,38 @@ export default function NoteScreen() {
           >
             {sw
               ? 'Andika Yohana 3:16 au Zaburi 23. Gusa rejeo kusoma kifungu.'
-              : 'Type John 3:16 or Yohana 3:16. Tap a recognized reference to read the passage.'}
+              : 'Type John 3:16 or Yohana 3:16. References also appear in blue as you write.'}
           </Text>
         )}
       </View>
-      <Input
-        accessibilityLabel="Note body"
-        testID="note-body"
-        placeholder={
-          sw
-            ? 'Andika unachojifunza, swali, au sala…'
-            : 'What is stirring in your heart?\n\nCapture a thought, a verse, a prayer…'
-        }
-        value={note.body}
-        onChangeText={(body) => update({ body })}
-        onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
-        multiline
-        textAlignVertical="top"
-        maxLength={100000}
-        style={{
-          minHeight: 300,
-          backgroundColor: 'transparent',
-          borderWidth: 0,
-          paddingHorizontal: 0,
-          fontSize: 17,
-          lineHeight: 29,
-        }}
-      />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <Button
-        secondary
-        icon="sparkles-outline"
-        disabled={note.body.trim().length < 10}
-        onPress={() => {
+      <EditorToolbar
+        onCommand={(command) => editor.current?.command(command)}
+        onReflect={() => {
           setAiText('');
           setAiError('');
           setDialog('ai');
         }}
-      >
-        {sw ? 'Msaada wa kutafakari' : 'Reflect with AI'}
-      </Button>
+        onBible={() => {
+          void (async () => {
+            if (timer.current) clearTimeout(timer.current);
+            if (current.current) await enqueue(current.current);
+            openBible(references[0] || { bookId: 19, chapter: 23 }, note.id);
+          })().catch(() => setError('Save this note before opening the Bible.'));
+        }}
+      />
+      <RichEditor
+        key={note.id}
+        ref={editor}
+        initialHtml={note.html}
+        initialText={note.body}
+        placeholder={
+          sw ? 'Andika unachojifunza, swali, au sala…' : 'Capture a thought, a verse, a prayer…'
+        }
+        onChange={(html, body) => update({ html, body })}
+        onSelection={setSelectedText}
+        onReference={(reference) => setPassage(reference)}
+      />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.row}>
         <Text style={{ fontFamily: fonts.body, color: colors.muted, fontSize: 11 }}>
           {note.body.trim() ? note.body.trim().split(/\s+/).length : 0} words · {references.length}{' '}
@@ -329,10 +333,16 @@ export default function NoteScreen() {
           </Text>
         </Pressable>
       </View>
-      <PassageSheet
+      <ScriptureSheet
         reference={passage}
         onClose={() => setPassage(null)}
-        onInsert={(text) => update({ body: `${note.body}\n\n${text}\n` })}
+        onInsert={(text) => editor.current?.appendText(text)}
+        sourceNoteId={note.id}
+        onOpenBible={async (reference) => {
+          if (timer.current) clearTimeout(timer.current);
+          if (current.current) await enqueue(current.current);
+          openBible(reference, note.id);
+        }}
       />
       <Sheet
         visible={dialog === 'delete'}
@@ -351,17 +361,32 @@ export default function NoteScreen() {
       </Sheet>
       <Sheet
         visible={dialog === 'ai'}
-        title={sw ? 'Nafasi ya kutafakari' : 'A little help reflecting'}
+        title={sw ? 'Tafakari zaidi' : 'A moment to reflect'}
         onClose={() => {
           if (!busy) setDialog(null);
         }}
       >
         <Body>
-          {selection.end > selection.start ? 'Your selected text' : 'This note’s text'} will be sent
-          to DeepSeek when you choose an action below. Suggestions are shown for you to review
-          before adding them to your note.
+          {selectedText.trim() ? 'Your selected words' : 'This note’s words'} will be sent to
+          DeepSeek when you choose an action below. Suggestions are shown for you to review before
+          adding them to your note.
         </Body>
-        {aiText ? (
+        {!user ? (
+          <>
+            <Body>
+              Sign in when you want optional study help. Your notebook remains available without an
+              account.
+            </Body>
+            <Button
+              onPress={() => {
+                setDialog(null);
+                navigate('Account');
+              }}
+            >
+              Sign in to continue
+            </Button>
+          </>
+        ) : aiText ? (
           <>
             <Text selectable style={styles.body}>
               {aiText}
@@ -369,11 +394,11 @@ export default function NoteScreen() {
             <Button
               icon="add"
               onPress={() => {
-                update({ body: `${note.body}\n\nAI-assisted reflection\n${aiText}\n` });
+                editor.current?.appendText(`Study suggestions (AI-assisted)\n${aiText}`);
                 setDialog(null);
               }}
             >
-              Add suggestion to note
+              Add to my note
             </Button>
           </>
         ) : (
@@ -384,10 +409,10 @@ export default function NoteScreen() {
               icon="sparkles-outline"
               onPress={() => void assist('summarize')}
             >
-              Send and summarize
+              Summarize my words
             </Button>
             <Button secondary disabled={busy} onPress={() => void assist('questions')}>
-              Send for reflection questions
+              Suggest reflection questions
             </Button>
           </>
         )}
@@ -398,7 +423,7 @@ export default function NoteScreen() {
               secondary
               onPress={() => {
                 setDialog(null);
-                router.push('/account');
+                navigate('Account');
               }}
             >
               Open account

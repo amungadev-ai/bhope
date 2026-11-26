@@ -1,5 +1,5 @@
 {
-  "fingerprint": "bhope-public-domain-sample-v1",
+  "fingerprint": "bhope-public-domain-sample-v2",
   "sample": true,
   "versions": [
     {
@@ -139,6 +139,146 @@
       "chapter": 4,
       "verse": 7,
       "text": "Amani ya Mungu, iliyo juu ya ufahamu wetu, italinda mioyo na mawazo yenu katika Kristo Yesu."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 1,
+      "text": "In the beginning was the Word, and the Word was with God, and the Word was God."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 2,
+      "text": "The same was in the beginning with God."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 3,
+      "text": "All things were made by him; and without him was not any thing made that was made."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 4,
+      "text": "In him was life; and the life was the light of men."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 5,
+      "text": "And the light shineth in darkness; and the darkness comprehended it not."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 6,
+      "text": "There was a man sent from God, whose name was John."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 7,
+      "text": "The same came for a witness, to bear witness of the Light, that all men through him might believe."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 8,
+      "text": "He was not that Light, but was sent to bear witness of that Light."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 9,
+      "text": "That was the true Light, which lighteth every man that cometh into the world."
+    },
+    {
+      "version": "en",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 10,
+      "text": "He was in the world, and the world was made by him, and the world knew him not."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 1,
+      "text": "Hapo mwanzo Neno alikuwapo. Neno alikuwa pamoja na Mungu, naye Neno alikuwa Mungu."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 2,
+      "text": "Tangu mwanzo alikuwa pamoja na Mungu."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 3,
+      "text": "Vitu vyote viliumbwa kupitia kwake; hakuna kilichoumbwa bila yeye."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 4,
+      "text": "Uzima ulikuwa ndani yake, nao uzima huo ulikuwa mwanga kwa watu."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 5,
+      "text": "Mwanga unangaa gizani, na giza halikuuelewa."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 6,
+      "text": "Kulikuwa na mtu aliyetumwa na Mungu, aliyeitwa Yohana."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 7,
+      "text": "Alikuja kutoa ushuhuda kuhusu mwanga, ili watu wote waamini kupitia ushuhuda wake."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 8,
+      "text": "Yeye mwenyewe hakuwa ule mwanga; alikuja kuushuhudia mwanga."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 9,
+      "text": "Neno alikuwa mwanga wa kweli, unaomwangazia kila mtu anayekuja ulimwenguni."
+    },
+    {
+      "version": "sw",
+      "bookId": 43,
+      "chapter": 1,
+      "verse": 10,
+      "text": "Alikuwapo ulimwenguni, nao ulimwengu uliumbwa kupitia kwake, lakini ulimwengu haukumtambua."
     }
   ]
 }

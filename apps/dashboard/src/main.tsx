@@ -43,17 +43,9 @@ interface Overview {
   aiEnabled: boolean;
   dailyAiLimit: number;
 }
-async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
-    ...options,
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-  });
-  if (response.status === 204) return undefined as T;
-  const result = await response.json();
-  if (!response.ok) throw new Error(result.error || 'This request could not be completed.');
-  return result;
-}
+import { api } from './api';
+import { InspirationStudio } from './inspirations';
+import { GivingStudio } from './giving';
 const emptyText = (): DevotionalText => ({
   title: '',
   subtitle: '',
@@ -91,7 +83,9 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'overview' | 'library' | 'users'>('overview');
+  const [tab, setTab] = useState<'overview' | 'library' | 'users' | 'inspirations' | 'giving'>(
+    'overview',
+  );
   const [entries, setEntries] = useState<Entry[]>([]);
   const [overview, setOverview] = useState<Overview | null>(null);
   const [editing, setEditing] = useState<Entry | null>(null);
@@ -262,6 +256,28 @@ function App() {
             <BookOpen size={18} />
             Devotionals
           </button>
+          <button
+            className={tab === 'inspirations' ? 'active' : ''}
+            onClick={() => {
+              setTab('inspirations');
+              setEditing(null);
+            }}
+          >
+            <BookOpen size={18} />
+            Inspirations
+          </button>
+          {user.role === 'admin' ? (
+            <button
+              className={tab === 'giving' ? 'active' : ''}
+              onClick={() => {
+                setTab('giving');
+                setEditing(null);
+              }}
+            >
+              <Users size={18} />
+              Giving & reports
+            </button>
+          ) : null}
           {user.role === 'admin' && (
             <button
               className={tab === 'users' ? 'active' : ''}
@@ -435,6 +451,10 @@ function App() {
                 </section>
               </div>
             </>
+          ) : tab === 'inspirations' ? (
+            <InspirationStudio role={user.role} />
+          ) : tab === 'giving' ? (
+            <GivingStudio />
           ) : tab === 'users' ? (
             <People currentUser={user} />
           ) : (

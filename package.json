@@ -22,9 +22,10 @@
     "lint": "npm run lint --workspace=@bhope/mobile",
     "test": "node --test packages/shared/test/*.test.mjs && npm run test --workspace=@bhope/api",
     "build": "npm run build --workspace=@bhope/api && npm run build --workspace=@bhope/dashboard",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "check": "npm run editor:build && npm run typecheck && npm run lint && npm test && npm run build",
     "deploy:prepare": "npm run build && node scripts/prepare-api.mjs",
-    "format": "prettier --write \"apps/**/*.{ts,tsx,js,cjs,css,json}\" \"packages/**/*.{js,mjs,ts,json}\" \"scripts/*.mjs\" \"docs/*.md\" README.md package.json .prettierrc.json"
+    "format": "prettier --write \"apps/**/*.{ts,tsx,js,cjs,css,json}\" \"packages/**/*.{js,mjs,ts,json}\" \"scripts/*.mjs\" \"docs/*.md\" README.md package.json .prettierrc.json",
+    "editor:build": "node scripts/build-editor.mjs"
   },
   "devDependencies": {
     "fast-xml-parser": "^5.12.1",

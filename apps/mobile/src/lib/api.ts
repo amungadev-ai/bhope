@@ -3,7 +3,7 @@ export const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '')
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!apiUrl)
     throw new Error(
-      'Connect your API in the Expo environment settings to use this feature. Your Bible and notebook work offline.',
+      'This service is not available yet. Your Bible and notebook still work offline.',
     );
   const token = await getToken();
   let response: Response;

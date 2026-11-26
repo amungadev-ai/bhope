@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useRoute } from '@react-navigation/native';
+import { goBack, navigate, openTab } from '../navigation/actions';
 import { formatReference, type Note, type Verse } from '@bhope/shared';
-import { useApp } from '../../lib/context';
-import { getPassage, getPreference, saveNote, setPreference } from '../../lib/storage';
+import { useApp } from '../lib/context';
+import { getPassage, getPreference, saveNote, setPreference } from '../lib/storage';
 import {
   Body,
   Button,
@@ -15,9 +16,9 @@ import {
   Screen,
   styles,
   Title,
-} from '../../components/ui';
+} from '../components/ui';
 export default function DevotionalScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useRoute().params as { id: string };
   const { language, fontSize, devotionals } = useApp();
   const devotional = devotionals.find((item) => item.id === id);
   const [verses, setVerses] = useState<Verse[]>([]);
@@ -42,7 +43,7 @@ export default function DevotionalScreen() {
   if (!devotional)
     return (
       <Screen>
-        <Button onPress={() => router.replace('/')}>Return to today</Button>
+        <Button onPress={() => openTab('Today')}>Return to today</Button>
         <Body>This devotional is not available offline.</Body>
       </Screen>
     );
@@ -63,7 +64,7 @@ export default function DevotionalScreen() {
         updatedAt: now,
       };
       await saveNote(note);
-      router.push(`/note/${note.id}`);
+      navigate('NoteEditor', { id: note.id });
     } catch {
       setError('Your reflection could not be created. Please try again.');
     }
@@ -71,7 +72,7 @@ export default function DevotionalScreen() {
   return (
     <Screen>
       <View style={styles.row}>
-        <IconButton name="arrow-back" label="Go back" onPress={() => router.back()} />
+        <IconButton name="arrow-back" label="Go back" onPress={() => goBack()} />
         <Label>{sw ? 'NAFASI YA KUTULIA' : 'YOUR QUIET MOMENT'}</Label>
         <LanguageSwitch />
       </View>

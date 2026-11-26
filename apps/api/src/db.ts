@@ -1,4 +1,4 @@
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Config } from './config.js';
@@ -61,16 +61,21 @@ export async function openDatabase(config: Config, sqlitePath?: string): Promise
   };
 }
 export async function migrate(db: Database) {
-  const schema = await readFile(new URL('../migrations/001_initial.sql', import.meta.url), 'utf8');
-  for (const statement of schema
-    .split(';')
-    .map((item) => item.trim())
-    .filter(Boolean))
-    await db.run(
-      db.driver === 'mysql'
-        ? `${statement} ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
-        : statement,
-    );
+  const directory = new URL('../migrations/', import.meta.url);
+  for (const filename of (await readdir(directory))
+    .filter((name) => name.endsWith('.sql'))
+    .sort()) {
+    const schema = await readFile(new URL(filename, directory), 'utf8');
+    for (const statement of schema
+      .split(';')
+      .map((item) => item.trim())
+      .filter(Boolean))
+      await db.run(
+        db.driver === 'mysql'
+          ? `${statement} ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+          : statement,
+      );
+  }
   const [{ total }] = await db.all<{ total: number }>('SELECT COUNT(*) AS total FROM devotionals');
   if (!Number(total))
     for (const [index, devotional] of devotionalSeeds.entries()) {

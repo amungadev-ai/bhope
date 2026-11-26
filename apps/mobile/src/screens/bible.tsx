@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { books, extractReferences, formatReference, type Verse } from '@bhope/shared';
-import { useApp } from '../../lib/context';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { goBack, openDrawer, type BibleParams } from '../navigation/actions';
+import {
+  books,
+  extractReferences,
+  formatReference,
+  type Verse,
+  type Reference,
+} from '@bhope/shared';
+import { useApp } from '../lib/context';
 import {
   bible,
   getAvailableBooks,
@@ -10,10 +17,10 @@ import {
   getPassage,
   listBookmarks,
   searchBible,
-  toggleBookmark,
-} from '../../lib/storage';
+} from '../lib/storage';
 import {
   Body,
+  Button,
   colors,
   fonts,
   Icon,
@@ -25,9 +32,10 @@ import {
   Sheet,
   styles,
   Title,
-} from '../../components/ui';
+} from '../components/ui';
+import { ScriptureSheet } from '../components/scripture-sheet';
 export default function BibleScreen() {
-  const params = useLocalSearchParams<{ book?: string; chapter?: string; verse?: string }>();
+  const params = (useRoute().params ?? {}) as BibleParams;
   const { language, fontSize, setFontSize } = useApp();
   const [bookId, setBookId] = useState(19);
   const [chapter, setChapter] = useState(23);
@@ -44,6 +52,10 @@ export default function BibleScreen() {
   const loading = loadedKey !== key;
   const [error, setError] = useState('');
   const [highlight, setHighlight] = useState<number | undefined>();
+  const [highlightEnd, setHighlightEnd] = useState<number | undefined>();
+  const [actions, setActions] = useState<Reference | null>(null);
+  const route = useRoute();
+  const reader = route.name === 'BibleReader';
   const sw = language === 'sw';
   useFocusEffect(
     useCallback(() => {
@@ -53,9 +65,10 @@ export default function BibleScreen() {
           setBookId(id);
           setChapter(Number(params.chapter) || 1);
           setHighlight(Number(params.verse) || undefined);
+          setHighlightEnd(Number(params.verseEnd) || Number(params.verse) || undefined);
         }
       }
-    }, [params.book, params.chapter, params.verse]),
+    }, [params.book, params.chapter, params.verse, params.verseEnd]),
   );
   useEffect(() => {
     let active = true;
@@ -128,20 +141,6 @@ export default function BibleScreen() {
       clearTimeout(timer);
     };
   }, [query, language]);
-  async function bookmark(verse: Verse) {
-    try {
-      const isSaved = await toggleBookmark(verse);
-      const key = `${verse.version}:${verse.bookId}:${verse.chapter}:${verse.verse}`;
-      setSaved((old) => {
-        const next = new Set(old);
-        if (isSaved) next.add(key);
-        else next.delete(key);
-        return next;
-      });
-    } catch {
-      setError('This bookmark could not be saved.');
-    }
-  }
   async function move(direction: number) {
     const index = chapters.indexOf(chapter) + direction;
     if (chapters[index]) {
@@ -161,15 +160,33 @@ export default function BibleScreen() {
   return (
     <Screen>
       <View style={styles.row}>
+        <IconButton
+          name={reader ? 'arrow-back' : 'menu-outline'}
+          label={reader ? 'Return to note' : 'Open menu'}
+          onPress={reader ? goBack : openDrawer}
+        />
+        <Label>
+          {reader && params.sourceNoteId
+            ? sw
+              ? 'BIBLIA NA DAFTARI'
+              : 'BIBLE & NOTEBOOK'
+            : sw
+              ? 'NAFASI YAKO YA KUSOMA'
+              : 'YOUR READING SPACE'}
+        </Label>
+        <LanguageSwitch />
+      </View>
+      <View style={styles.row}>
         <View style={{ gap: 6 }}>
           <Label>{sw ? 'NENO LILILO HAI' : 'THE LIVING WORD'}</Label>
           <Title>{sw ? 'Biblia yako.' : 'Your Bible.'}</Title>
         </View>
-        <LanguageSwitch />
       </View>
       <Input
         accessibilityLabel="Search Bible"
-        placeholder={sw ? 'Tafuta neno au Yohana 3:16' : 'Search a word or John 3:16'}
+        placeholder={
+          sw ? 'Tafuta Yohana 1: 1–10 au neno' : 'Try John 1: 1–10, jhon 3:16, or a word'
+        }
         value={query}
         onChangeText={setQuery}
       />
@@ -192,6 +209,7 @@ export default function BibleScreen() {
                 setBookId(verse.bookId);
                 setChapter(verse.chapter);
                 setHighlight(verse.verse);
+                setHighlightEnd(extractReferences(query)[0]?.verseEnd ?? verse.verse);
                 setQuery('');
               }}
             >
@@ -259,17 +277,31 @@ export default function BibleScreen() {
                 return (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`${selected ? 'Remove bookmark from' : 'Bookmark'} verse ${verse.verse}`}
+                    accessibilityLabel={`Verse ${verse.verse}${selected ? ', saved' : ''}`}
                     key={verse.verse}
-                    onPress={() => void bookmark(verse)}
+                    onPress={() => {
+                      setHighlight(verse.verse);
+                      setHighlightEnd(verse.verse);
+                    }}
+                    onLongPress={() =>
+                      setActions({
+                        bookId,
+                        chapter,
+                        verseStart: verse.verse,
+                        verseEnd: verse.verse,
+                      })
+                    }
+                    delayLongPress={450}
                     style={{
                       padding: 12,
                       marginHorizontal: -12,
                       borderRadius: 12,
                       backgroundColor: selected
                         ? '#E8EDDC'
-                        : highlight === verse.verse
-                          ? '#F3E8CE'
+                        : highlight &&
+                            verse.verse >= highlight &&
+                            verse.verse <= (highlightEnd ?? highlight)
+                          ? '#E4EDF6'
                           : 'transparent',
                       flexDirection: 'row',
                       gap: 12,
@@ -316,7 +348,7 @@ export default function BibleScreen() {
                 void move(-1).catch(() => setError('The previous chapter could not be opened.'));
               }}
             />
-            <Label>{sw ? 'GUSA MSTARI KUHIFADHI' : 'TAP A VERSE TO BOOKMARK'}</Label>
+            <Label>{sw ? 'SHIKILIA MSTARI KWA CHAGUZI' : 'HOLD A VERSE FOR OPTIONS'}</Label>
             <IconButton
               name="arrow-forward"
               label="Next chapter"
@@ -338,6 +370,39 @@ export default function BibleScreen() {
         </>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {highlight ? (
+        <Button
+          secondary
+          icon="ellipsis-horizontal"
+          onPress={() =>
+            setActions({
+              bookId,
+              chapter,
+              verseStart: highlight,
+              verseEnd: highlightEnd ?? highlight,
+            })
+          }
+        >
+          {sw ? 'Chaguzi za kifungu' : 'Passage actions'}
+        </Button>
+      ) : null}
+      <ScriptureSheet
+        reference={actions}
+        onClose={() => setActions(null)}
+        sourceNoteId={params.sourceNoteId}
+        showOpenBible={false}
+        onBookmarkChange={() => {
+          void listBookmarks().then((items) =>
+            setSaved(
+              new Set(
+                items.map(
+                  (verse) => `${verse.version}:${verse.bookId}:${verse.chapter}:${verse.verse}`,
+                ),
+              ),
+            ),
+          );
+        }}
+      />
       <Sheet
         visible={picker === 'book'}
         title={sw ? 'Chagua kitabu' : 'Choose a book'}

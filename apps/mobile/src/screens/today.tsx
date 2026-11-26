@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { navigate, openTab, openDrawer } from '../navigation/actions';
 import { formatReference } from '@bhope/shared';
-import { useApp } from '../../lib/context';
-import { getPassage } from '../../lib/storage';
+import { useApp } from '../lib/context';
+import { getPassage } from '../lib/storage';
 import {
   Body,
   colors,
@@ -15,7 +15,7 @@ import {
   Screen,
   styles,
   Title,
-} from '../../components/ui';
+} from '../components/ui';
 export default function Today() {
   const { language, devotionals } = useApp();
   const [verse, setVerse] = useState('');
@@ -43,14 +43,19 @@ export default function Today() {
   return (
     <Screen>
       <View style={styles.row}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open menu"
+          onPress={openDrawer}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}
+        >
           <View style={local.logo}>
-            <Icon name="sunny-outline" color={colors.green} size={25} />
+            <Icon name="menu-outline" color={colors.green} size={25} />
           </View>
           <Text style={local.wordmark}>
             beacon of hope<Text style={{ color: colors.gold }}>.</Text>
           </Text>
-        </View>
+        </Pressable>
         <LanguageSwitch />
       </View>
       <View style={{ gap: 10 }}>
@@ -63,7 +68,7 @@ export default function Today() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Read today's devotional"
-        onPress={() => router.push(`/devotional/${devotional.id}`)}
+        onPress={() => navigate('Devotional', { id: devotional.id })}
       >
         <LinearGradient colors={['#2B5743', '#173D32']} style={local.hero}>
           <View pointerEvents="none" style={local.orbit} />
@@ -99,7 +104,7 @@ export default function Today() {
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push('/bible')}
+            onPress={() => openTab('Bible')}
             style={local.quickCard}
           >
             <View style={local.quickIcon}>
@@ -113,7 +118,7 @@ export default function Today() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push('/notes')}
+            onPress={() => openTab('Notebook')}
             style={[local.quickCard, { backgroundColor: '#F0EDDF' }]}
           >
             <View style={[local.quickIcon, { backgroundColor: '#E7E2CF' }]}>
@@ -145,7 +150,7 @@ export default function Today() {
           </View>
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push(`/devotional/${devotionals[1].id}`)}
+            onPress={() => navigate('Devotional', { id: devotionals[1].id })}
             style={local.nextCard}
           >
             <View style={local.nextIcon}>

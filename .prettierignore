@@ -3,3 +3,5 @@ node_modules
 .expo
 dist
 package-lock.json
+
+apps/mobile/src/lib/editor-runtime.generated.ts

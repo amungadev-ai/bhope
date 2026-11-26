@@ -17,15 +17,17 @@ Connect the computer and phone to the same Wi-Fi, then scan the terminal QR code
 
 After the first clone, get updates with `git pull` followed by `npm ci`. Use `npm start -- --clear` after changing Bible imports or environment settings. Development on a physical Android phone does not require Android Studio.
 
-## What works in this first version
+## What works in version 0.2
 
 - English/Swahili devotional screens, devotional details, reflection prompts, and locally saved reading completion.
-- Offline Bible book/chapter selection, text/reference search, reading-size controls, and bookmarks.
-- Sermon and reflection notebooks, speaker/church/date fields, autosave, local search, export through the phone share sheet, and deletion.
-- Automatic English/Swahili Scripture references, including abbreviations and verse ranges. Tap a reference to read or insert its passage. Detection works offline.
-- Optional DeepSeek note summaries and reflection questions after sign-in and explicit consent. Suggestions are reviewed before insertion.
+- Direct React Navigation 7: Today, Bible, Notebook, and Inspirations tabs, plus a drawer for account, saved verses, giving, history, and reading preferences.
+- Offline Bible book/chapter selection, text/reference search, reading-size controls, and explicit bookmarks. Tap to focus a verse; long press for copy, share, save, or add-to-note actions.
+- Sermon and reflection notebooks with headings, paragraphs, bold, italic, underline, numbered/bullet lists, checkboxes, undo/redo, autosave, and share/export. Existing plain-text notes remain readable and editable.
+- Automatic English/Swahili Scripture references, including aliases (`John`, `jhon`, `joh`, `jhn`, `jon`, `jn`, `Yohana`) and spaced verse ranges such as `John 1: 1-10`. Blue references inside note text open passage actions. Bible reading can return a passage to the current note without losing its title or content. Detection works offline.
+- Optional DeepSeek summaries and reflection questions under the small reflection-tools icon. Sign-in and consent are requested at that point; suggestions are reviewed before insertion. Daily reading and local notes do not require an account.
 - Separate editor/admin views in the web studio: bilingual drafts, live preview, submission for review, admin publication/scheduling, and admin role management.
-- An optional TikTok profile link in More, configured with the account supplied for this project. Donations open an HTTPS giving page when configured.
+- Curated Inspirations with individual TikTok players, editor drafts/review and admin publication/scheduling. The feed starts empty until real videos are selected; the ministry profile link remains in the drawer.
+- Optional KES donations: M-Pesa STK prompts and hosted Paystack card checkout in a bottom sheet, account-linked donation history, and admin finance reports. Payment methods stay disabled until server credentials and public HTTPS callbacks are configured. No live payment has been tested. See [giving setup](docs/GIVING.md).
 
 ## Load your complete NIV and Swahili Bibles
 
@@ -100,4 +102,6 @@ scripts           Local Bible importer and hosting package builder
 docs              Setup and architecture
 ```
 
-This is a working first development version. Notes currently stay on the device; the API's protected note endpoints are prepared for a later synchronization UI. Password recovery/email verification, push reminders, payment processing, TikTok video embeds, and production release builds are later milestones. Export important notes before clearing app data or reinstalling Expo Go.
+Daily devotionals, the Bible, and the notebook remain free. Paid extras are a later phase, with a separate purchase/entitlement design and store-billing review. Donations never unlock app content.
+
+This is a development version for Expo Go evaluation. Notes currently stay on the device; the API's protected note endpoints are prepared for a later synchronization UI. Live hosting/provider verification, password recovery/email verification, account deletion, push reminders, and production release builds remain later milestones. Export important notes before clearing app data or reinstalling Expo Go. See the [version 0.2 notes](docs/V0.2.md).

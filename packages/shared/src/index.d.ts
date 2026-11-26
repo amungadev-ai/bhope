@@ -58,6 +58,7 @@ export interface Note {
   id: string;
   title: string;
   body: string;
+  html?: string;
   kind: 'sermon' | 'reflection';
   preacher: string;
   church: string;
@@ -69,3 +70,38 @@ export const books: Book[];
 export const devotionalSeeds: Devotional[];
 export function extractReferences(text: string): DetectedReference[];
 export function formatReference(reference: Reference, language?: Language): string;
+
+export interface ReferenceRules {
+  aliases: Record<string, number>;
+  chapters: Record<number, number>;
+  pattern: string;
+}
+export const referenceRules: ReferenceRules;
+export function createReferenceExtractor(
+  rules: ReferenceRules,
+): (text: string) => DetectedReference[];
+export function getTikTokVideoId(url: string): string | null;
+export function getTikTokPlayerUrl(url: string): string | null;
+export function createNote(input?: Partial<Note>): Note;
+export interface Inspiration {
+  id: string;
+  title: string;
+  titleSw: string;
+  description: string;
+  descriptionSw: string;
+  url: string;
+  category: string;
+  status: 'draft' | 'review' | 'published';
+  publishAt: string | null;
+  updatedAt?: string;
+}
+export interface Donation {
+  id: string;
+  amount: number;
+  currency: 'KES';
+  method: 'mpesa' | 'card';
+  status: 'pending' | 'success' | 'failed' | 'reversed';
+  reference: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

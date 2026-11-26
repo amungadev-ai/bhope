@@ -1,47 +1,8 @@
 import { books } from './books.js';
 export { books };
 
-const normalize = (value) => value.toLowerCase().replace(/[.\s]+/g, '');
-const aliases = books.flatMap((book) => book.aliases.map((alias) => [alias, book]));
-const lookup = new Map(aliases.map(([alias, book]) => [normalize(alias), book]));
-const escapedAliases = [...new Set(aliases.map(([alias]) => alias))]
-  .sort((a, b) => b.length - a.length)
-  .map((alias) => alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s*'));
-const referencePattern = new RegExp(
-  `(^|[^\\p{L}\\p{N}])(${escapedAliases.join('|')})\\.?\\s*(\\d{1,3})(?::(\\d{1,3})(?:\\s*[-–—]\\s*(\\d{1,3}))?)?(?![\\p{L}\\d:])(?!\\s*[-–—]\\s*\\d)`,
-  'giu',
-);
-
-/** Detect explicit references; exact verse availability is checked by the selected Bible. */
-export function extractReferences(text) {
-  const matches = [];
-  for (const match of text.matchAll(new RegExp(referencePattern))) {
-    const book = lookup.get(normalize(match[2]));
-    const chapter = Number(match[3]);
-    const verseStart = match[4] ? Number(match[4]) : undefined;
-    const verseEnd = match[5] ? Number(match[5]) : verseStart;
-    if (!book || chapter < 1 || chapter > book.chapters) continue;
-    if (
-      verseStart !== undefined &&
-      (verseStart < 1 || verseStart > 200 || verseEnd < verseStart || verseEnd > 200)
-    )
-      continue;
-    const start = match.index + match[1].length;
-    if (/\d\s+$/.test(text.slice(0, start))) continue;
-    const raw = match[0].slice(match[1].length);
-    matches.push({
-      bookId: book.id,
-      chapter,
-      verseStart,
-      verseEnd,
-      raw,
-      start,
-      end: start + raw.length,
-      key: `${book.id}:${chapter}:${verseStart ?? ''}:${verseEnd ?? ''}`,
-    });
-  }
-  return matches;
-}
+export { extractReferences, createReferenceExtractor, referenceRules } from './references.js';
+export { getTikTokVideoId, getTikTokPlayerUrl, createNote } from './inspirations.js';
 
 export function formatReference(reference, language = 'en') {
   const book = books.find((item) => item.id === reference.bookId);

@@ -18,14 +18,10 @@ import {
   type User,
 } from './auth.js';
 
-class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
+import { HttpError } from './errors.js';
+import { inspirationRoutes } from './inspirations.js';
+import { paymentRoutes, givingCapabilities } from './payments.js';
+
 const textSchema = z.object({
   title: z.string().trim().max(180),
   subtitle: z.string().max(500),
@@ -49,6 +45,7 @@ const noteSchema = z.object({
   id: z.string().min(1).max(80),
   title: z.string().max(200),
   body: z.string().max(100000),
+  html: z.string().max(300000).optional(),
   kind: z.enum(['sermon', 'reflection']),
   preacher: z.string().max(150),
   church: z.string().max(200),
@@ -71,7 +68,12 @@ const unpack = (row: DevotionalRow) => ({
   updatedAt: row.updated_at,
 });
 
-export function createApp(config: Config, db: Database, aiFetch: typeof fetch = fetch) {
+export function createApp(
+  config: Config,
+  db: Database,
+  aiFetch: typeof fetch = fetch,
+  providerFetch: typeof fetch = fetch,
+) {
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', config.TRUST_PROXY);
@@ -84,6 +86,7 @@ export function createApp(config: Config, db: Database, aiFetch: typeof fetch = 
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:'],
           connectSrc: ["'self'"],
+          frameSrc: ['https://www.tiktok.com'],
         },
       },
     }),
@@ -98,7 +101,14 @@ export function createApp(config: Config, db: Database, aiFetch: typeof fetch = 
     next();
   });
   app.use(cors({ origin: allowed, credentials: true }));
-  app.use(express.json({ limit: '150kb' }));
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify: (req, _res, buffer) => {
+        (req as Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer);
+      },
+    }),
+  );
   app.use(
     '/api',
     rateLimit({ windowMs: 60000, limit: 120, standardHeaders: 'draft-8', legacyHeaders: false }),
@@ -134,6 +144,8 @@ export function createApp(config: Config, db: Database, aiFetch: typeof fetch = 
     next();
   };
 
+  app.use('/api/v1', inspirationRoutes(db, authenticate, staff));
+  app.use('/api/v1', paymentRoutes(config, db, authenticate, providerFetch));
   app.get('/api/v1/health', async (_req, res) => {
     await db.all('SELECT 1 AS ok');
     res.json({ status: 'ok', service: 'beacon-of-hope-api' });
@@ -142,6 +154,7 @@ export function createApp(config: Config, db: Database, aiFetch: typeof fetch = 
     res.json({
       tiktokUrl: config.TIKTOK_URL,
       donationUrl: config.DONATION_URL || null,
+      giving: givingCapabilities(config),
       aiEnabled: Boolean(config.DEEPSEEK_API_KEY),
       registrationEnabled: config.ALLOW_REGISTRATION === 'true',
     }),
@@ -423,13 +436,9 @@ export function createApp(config: Config, db: Database, aiFetch: typeof fetch = 
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Endpoint not found.')));
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof z.ZodError)
-      return void res
-        .status(400)
-        .json({
-          error: error.issues
-            .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-            .join('; '),
-        });
+      return void res.status(400).json({
+        error: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; '),
+      });
     const status =
       error instanceof HttpError
         ? error.status
@@ -440,19 +449,17 @@ export function createApp(config: Config, db: Database, aiFetch: typeof fetch = 
             : 500;
     const requestId = randomUUID();
     if (status === 500) console.error(`Request failed: ${requestId}`);
-    res
-      .status(status)
-      .json({
-        error:
-          error instanceof HttpError
-            ? error.message
-            : status === 413
-              ? 'The request is too large.'
-              : status === 400
-                ? 'The request body is invalid.'
-                : 'Something went wrong. Please try again.',
-        requestId,
-      });
+    res.status(status).json({
+      error:
+        error instanceof HttpError
+          ? error.message
+          : status === 413
+            ? 'The request is too large.'
+            : status === 400
+              ? 'The request body is invalid.'
+              : 'Something went wrong. Please try again.',
+      requestId,
+    });
   });
   return app;
 }

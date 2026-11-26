@@ -45,7 +45,7 @@ export function Icon({
   size?: number;
   color?: ComponentProps<typeof Ionicons>['color'];
 }) {
-  return <Ionicons name={name} size={size} color={color} />;
+  return <Ionicons name={name} size={size} color={color} accessible={false} aria-hidden />;
 }
 export function Screen({
   children,

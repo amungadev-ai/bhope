@@ -25,9 +25,9 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+- Use direct **React Navigation 7** with a native root stack, drawer, and bottom tabs, as requested by the user. Keep Expo Go compatibility; do not upgrade to React Navigation 8 without checking its additional native requirements.
+- Screens live in `src/screens`, navigation types/actions in `src/navigation`, and non-screen logic in components/hooks/lib.
+- Preserve the existing SQLite database name and note records when changing navigation or the editor.
 
 ## Building with EAS
 

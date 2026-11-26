@@ -1,8 +1,16 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { devotionalSeeds, type Devotional, type Language } from '@bhope/shared';
 import { bible, getPreference, initializeStorage, setPreference } from './storage';
 import { api, apiUrl } from './api';
+export interface AccountUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 interface AppState {
+  user: AccountUser | null;
+  refreshUser: () => Promise<void>;
   language: Language;
   setLanguage: (language: Language) => void;
   fontSize: number;
@@ -14,6 +22,32 @@ interface AppState {
 }
 const Context = createContext<AppState | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const refreshUser = useCallback(async () => {
+    if (!apiUrl) {
+      setUser(null);
+      return;
+    }
+    try {
+      setUser(await api<AccountUser>('/auth/me'));
+    } catch {
+      setUser(null);
+    }
+  }, []);
+  useEffect(() => {
+    if (!apiUrl) return;
+    let active = true;
+    void api<AccountUser>('/auth/me')
+      .then((profile) => {
+        if (active) setUser(profile);
+      })
+      .catch(() => {
+        if (active) setUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [language, updateLanguage] = useState<Language>('en');
   const [fontSize, updateSize] = useState(20);
   const [ready, setReady] = useState(false);
@@ -77,6 +111,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <Context.Provider
       value={{
+        user,
+        refreshUser,
         language,
         setLanguage: changeLanguage,
         fontSize,

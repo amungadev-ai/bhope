@@ -2,7 +2,7 @@
   "expo": {
     "name": "Beacon of Hope",
     "slug": "beacon-of-hope",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,7 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
-    "plugins": ["expo-router", "expo-font", "expo-sqlite", "expo-secure-store"],
+    "plugins": ["expo-font", "expo-sqlite", "expo-secure-store", "expo-web-browser"],
     "scheme": "beaconofhope"
   }
 }

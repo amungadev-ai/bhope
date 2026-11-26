@@ -32,6 +32,7 @@ export interface DevotionalText {
 }
 export interface Devotional {
   id: string;
+  publishAt?: string | null;
   category: string;
   bookId: number;
   chapter: number;
@@ -68,6 +69,19 @@ export interface Note {
 }
 export const books: Book[];
 export const devotionalSeeds: Devotional[];
+export function publicationDay(value?: string | null): string | null;
+export function isPublicationDate(value: string): boolean;
+export function filterDevotionals(
+  items: Devotional[],
+  filters?: { query?: string; from?: string; to?: string; order?: 'newest' | 'oldest' },
+): Devotional[];
+export interface DevotionalArchivePage {
+  items: Devotional[];
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
 export function extractReferences(text: string): DetectedReference[];
 export function formatReference(reference: Reference, language?: Language): string;
 

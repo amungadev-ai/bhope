@@ -17,9 +17,9 @@ Connect the computer and phone to the same Wi-Fi, then scan the terminal QR code
 
 After the first clone, get updates with `git pull` followed by `npm ci`. Use `npm start -- --clear` after changing Bible imports or environment settings. Development on a physical Android phone does not require Android Studio.
 
-## What works in version 0.5.3
+## What works in version 0.6.0
 
-- English/Swahili devotional screens, devotional details, reflection prompts, and locally saved reading completion.
+- English/Swahili devotional reading with a fixed back/title/subtitle/reading-time header, safe-area bottom spacing, passage links, reflection prompts, and locally saved completion. Past devotionals opens a searchable library after Keep growing on Home, with publication-date ranges, newest/oldest sorting, pagination, and cached offline reading. Publication days follow Nairobi time; undated bundled reflections stay labelled as saved readings.
 - Direct React Navigation 7 with five tabs: Today, Bible, Notebook, Inspiration, and More. The drawer is nested under More; Home also offers a shortcut. Fixed headers leave reading content scrollable underneath.
 - App language lives in Preferences. Bible language is independent and stays in the reader. Four persisted color themes: Evergreen, Ocean, Plum, and Warm Sand.
 - Offline Bible book/chapter/range selection, text/reference search, reading-size controls, and explicit bookmarks. The roomier header includes a dedicated verse-range picker; tighter verse spacing leaves more room for reading. Tap to focus a verse; long press for copy, share, save, or add-to-note actions.
@@ -35,7 +35,9 @@ After the first clone, get updates with `git pull` followed by `npm ci`. Use `np
 
 The public repository includes a small development Bible sample so a fresh clone runs immediately. The English sample is KJV; Swahili development renderings are clearly labelled and **are not SRUV**.
 
-Keep the original uploaded XML files on your computer, then run from the repository root:
+For the ready-to-install Bible pack supplied with the 0.6 update, extract `bhope-full-bibles.zip` into the repository root. It places the complete library at `.local/bible.json`; restart Expo with a cleared cache.
+
+Alternatively, keep the original uploaded XML files on your computer, then run from the repository root:
 
 ```sh
 npm run bible:import -- --english "/path/to/EnglishNIVBible.xml" --swahili "/path/to/SwahiliBible.xml"

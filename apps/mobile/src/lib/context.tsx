@@ -23,6 +23,7 @@ interface AppState {
   ready: boolean;
   error: string;
   devotionals: Devotional[];
+  rememberDevotionals: (items: Devotional[]) => void;
   retry: () => void;
 }
 const Context = createContext<AppState | null>(null);
@@ -61,6 +62,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [devotionals, setDevotionals] = useState<Devotional[]>(devotionalSeeds);
+  const rememberDevotionals = useCallback((items: Devotional[]) => {
+    if (!items.length) return;
+    setDevotionals((previous) => {
+      const incoming = new Map(items.map((item) => [item.id, item]));
+      return [...incoming.values(), ...previous.filter((item) => !incoming.has(item.id))].slice(
+        0,
+        500,
+      );
+    });
+  }, []);
+  useEffect(() => {
+    if (ready)
+      void setPreference('devotionals-cache', JSON.stringify(devotionals)).catch(() => undefined);
+  }, [ready, devotionals]);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -85,7 +100,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (size >= 16 && size <= 28) updateSize(size);
         if (cache) {
           try {
-            setDevotionals(JSON.parse(cache));
+            const saved = JSON.parse(cache);
+            if (Array.isArray(saved) && saved.length) setDevotionals(saved);
           } catch {
             /* use bundled reflections */
           }
@@ -96,8 +112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         try {
           const items = await api<Devotional[]>('/devotionals');
           if (items.length) {
-            await setPreference('devotionals-cache', JSON.stringify(items));
-            if (active) setDevotionals(items);
+            if (active) rememberDevotionals(items);
           }
         } catch {
           /* keep cached reading available offline */
@@ -111,7 +126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
     };
-  }, [attempt]);
+  }, [attempt, rememberDevotionals]);
   const changeLanguage = (value: Language) => {
     updateLanguage(value);
     void setPreference('language', value).catch(() =>
@@ -151,6 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ready,
         error,
         devotionals,
+        rememberDevotionals,
         retry: () => {
           setReady(false);
           setAttempt((value) => value + 1);

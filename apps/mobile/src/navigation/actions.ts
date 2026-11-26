@@ -35,6 +35,7 @@ export type RootRoutes = {
   Main: NavigatorScreenParams<TabRoutes> | undefined;
   NoteEditor: { id: string; kind?: Note['kind']; insert?: { text: string; nonce: string } };
   Devotional: { id: string };
+  DevotionalArchive: undefined;
   BibleReader: BibleParams;
   Account: undefined;
   AiPlan: undefined;

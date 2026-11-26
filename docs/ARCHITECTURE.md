@@ -67,3 +67,13 @@ Daily devotionals, Bible reading, and notes are free. Paid articles/series are p
 9. Test on physical Android devices, add accessibility/localization coverage, and prepare an EAS production build.
 
 The current development version is intended for Expo Go evaluation. It is not a completed public-store release.
+
+## Devotional reading and archive
+
+The root devotional screen owns a fixed back/title/subtitle/minutes header and safe top/bottom insets. Its scroll content has additional bottom padding; passage viewing and note reflection remain available. Reader routes identify each devotional by id, and uncached ids load from the public detail endpoint.
+
+Home links to a root devotional library after Keep growing. It uses a virtualized list with title search, inclusive Nairobi publication-day ranges, and newest/oldest ordering. The public archive API paginates beyond the 60-item Home feed and filters published records whose schedule has already arrived. Both title languages are searchable. Drafts, reviews, undated publications, and future schedules are excluded from archive and detail endpoints. Editor/admin scheduling is the publication-date source; there is no separate archive publishing workflow.
+
+The app retains up to 500 recently fetched public devotional records in its existing preference storage. Home sorts by actual publication date so opening an older reading does not replace the newest one. The archive falls back to saved readings if the API is unavailable. Bundled seed reflections have no invented publication dates and therefore do not match a date filter until dated content is published.
+
+Core daily devotionals, the archive, Bible, and notebook remain free. No donation or subscription entitlements change in this release.

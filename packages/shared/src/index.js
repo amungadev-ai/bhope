@@ -3,6 +3,7 @@ export { books };
 
 export { extractReferences, createReferenceExtractor, referenceRules } from './references.js';
 export { getTikTokVideoId, getTikTokPlayerUrl, createNote } from './inspirations.js';
+export { publicationDay, isPublicationDate, filterDevotionals } from './devotionals.js';
 
 export function formatReference(reference, language = 'en') {
   const book = books.find((item) => item.id === reference.bookId);

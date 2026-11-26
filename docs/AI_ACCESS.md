@@ -24,3 +24,9 @@ For the Android store release, configure an AI monthly subscription product and 
 Before opening checkout, implement authenticated purchase initiation, server receipt verification, transaction ownership, idempotent entitlement updates, restore purchases, cancellation/expiry, renewal and refund notifications, and reconciliation. Query the store's localized price for the actual purchase button. Google Play/Apple configuration, merchant accounts, and a device development build are required to test real billing; none is configured in this repository setup.
 
 Daily devotionals, Bible reading, reference detection, local notes, formatting, themes, and verse actions remain free. AI always requires an explicit user action and disclosure before sending note text to DeepSeek.
+
+## Giving and future paid extras
+
+Giving and AI access remain separate. A donation, including KES 100, does not automatically grant a subscription or unlock future content. The proposed AI plan remains KES 150 per month after the five one-time free uses; checkout and recurring billing still need their configured purchase flow. Daily devotionals, their archive, the Bible, and the notebook remain free.
+
+Paid articles or modules are a later product decision. Define the benefits and access period explicitly before introducing purchases or any donor reward. There is no automatic conversion from gift amount to access duration.

@@ -216,7 +216,13 @@ export default function BibleScreen() {
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        {reader ? <IconButton name="arrow-back" label="Return to note" onPress={goBack} /> : null}
+        {reader ? (
+          <IconButton
+            name="arrow-back"
+            label={params.sourceNoteId ? 'Return to note' : 'Go back'}
+            onPress={goBack}
+          />
+        ) : null}
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={{ fontFamily: fonts.serif, fontSize: reader ? 23 : 27, color: colors.ink }}>
             {sw ? 'Biblia yako.' : 'Your Bible.'}
@@ -324,6 +330,7 @@ export default function BibleScreen() {
   return (
     <Screen
       safeTop
+      safeBottom={reader}
       header={header}
       contentStyle={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 24, gap: 16 }}
     >

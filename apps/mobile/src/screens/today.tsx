@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { navigate, openTab } from '../navigation/actions';
-import { formatReference } from '@bhope/shared';
+import { filterDevotionals, formatReference } from '@bhope/shared';
 import { useApp } from '../lib/context';
 import { getPassage } from '../lib/storage';
 import { Body, fonts, Icon, Label, Screen, Title, useUi } from '../components/ui';
 export default function Today() {
   const { colors, styles } = useUi();
   const local = makeLocal(colors);
-  const { language, devotionals } = useApp();
+  const { language, devotionals: cachedDevotionals } = useApp();
+  const devotionals = filterDevotionals(cachedDevotionals);
   const [verse, setVerse] = useState('');
   const devotional = devotionals[0];
   const text = devotional[language];
@@ -144,6 +145,25 @@ export default function Today() {
           </Pressable>
         </View>
       ) : null}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Browse past devotionals"
+        onPress={() => navigate('DevotionalArchive')}
+        style={[styles.card, { backgroundColor: colors.soft, gap: 14 }]}
+      >
+        <View style={styles.row}>
+          <Icon name="library-outline" color={colors.green} size={26} />
+          <Icon name="arrow-forward" size={20} />
+        </View>
+        <View style={{ gap: 7 }}>
+          <Text style={local.sectionTitle}>{sw ? 'Tafakari zilizopita' : 'Past devotionals'}</Text>
+          <Body muted>
+            {sw
+              ? 'Rudia neno lililokupa tumaini. Tafuta kwa kichwa au tarehe.'
+              : 'Return to a word that stayed with you. Browse by title or date.'}
+          </Body>
+        </View>
+      </Pressable>
       <Text style={local.footer}>
         {sw
           ? 'Imara katika Neno. Tunakua katika tumaini.'

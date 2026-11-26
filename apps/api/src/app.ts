@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { isPublicationDate } from '@bhope/shared';
 import type { Config } from './config.js';
 import type { Database } from './db.js';
 import {
@@ -171,6 +172,71 @@ export function createApp(
         .then((rows) => rows.map(unpack)),
     ),
   );
+  app.get('/api/v1/devotionals/archive', async (req, res) => {
+    const day = z.string().refine(isPublicationDate, 'Use a valid YYYY-MM-DD date.');
+    const input = z
+      .object({
+        q: z.string().trim().max(120).default(''),
+        from: day.optional(),
+        to: day.optional(),
+        order: z.enum(['newest', 'oldest']).default('newest'),
+        page: z.coerce.number().int().min(1).max(10000).default(1),
+        limit: z.coerce.number().int().min(1).max(40).default(20),
+      })
+      .parse(req.query);
+    if (input.from && input.to && input.from > input.to)
+      throw new HttpError(400, 'The start date must be before the end date.');
+    const conditions = ['status = ?', 'publish_at <= ?'];
+    const params: (string | number)[] = ['published', new Date().toISOString()];
+    if (input.q) {
+      const title = (language: string) => {
+        const field = `JSON_EXTRACT(payload, '$.${language}.title')`;
+        return db.driver === 'mysql' ? `JSON_UNQUOTE(${field})` : field;
+      };
+      conditions.push(
+        `(LOWER(${title('en')}) LIKE ? ESCAPE '!' OR LOWER(${title('sw')}) LIKE ? ESCAPE '!')`,
+      );
+      const term = `%${input.q.toLowerCase().replace(/[!%_]/g, '!$&')}%`;
+      params.push(term, term);
+    }
+    if (input.from) {
+      conditions.push('publish_at >= ?');
+      params.push(new Date(`${input.from}T00:00:00+03:00`).toISOString());
+    }
+    if (input.to) {
+      conditions.push('publish_at < ?');
+      params.push(new Date(Date.parse(`${input.to}T00:00:00+03:00`) + 86400000).toISOString());
+    }
+    const where = conditions.join(' AND ');
+    const [{ total }] = await db.all<{ total: number }>(
+      `SELECT COUNT(*) AS total FROM devotionals WHERE ${where}`,
+      params,
+    );
+    const rows = await db.all<DevotionalRow>(
+      // Pagination values are bounded integers from the validated query.
+      `SELECT * FROM devotionals WHERE ${where} ORDER BY publish_at ${input.order === 'oldest' ? 'ASC' : 'DESC'}, id ASC LIMIT ${input.limit} OFFSET ${(input.page - 1) * input.limit}`,
+      params,
+    );
+    res.json({
+      items: rows.map(unpack),
+      total: Number(total),
+      page: input.page,
+      limit: input.limit,
+      hasMore: input.page * input.limit < Number(total),
+    });
+  });
+  app.get('/api/v1/devotionals/:id', async (req, res) => {
+    const id = z
+      .string()
+      .regex(/^[a-z0-9-]{1,80}$/)
+      .parse(req.params.id);
+    const [row] = await db.all<DevotionalRow>(
+      'SELECT * FROM devotionals WHERE id = ? AND status = ? AND publish_at <= ?',
+      [id, 'published', new Date().toISOString()],
+    );
+    if (!row) throw new HttpError(404, 'This devotional is not available.');
+    res.json(unpack(row));
+  });
   app.post('/api/v1/auth/register', authLimiter, async (req, res) => {
     if (config.ALLOW_REGISTRATION !== 'true')
       throw new HttpError(403, 'Registration is currently closed.');

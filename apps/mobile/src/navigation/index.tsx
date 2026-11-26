@@ -27,6 +27,7 @@ import Bible from '../screens/bible';
 import Notes from '../screens/notes';
 import NoteEditor from '../screens/note-editor';
 import Devotional from '../screens/devotional';
+import DevotionalArchive from '../screens/devotional-archive';
 import Account from '../screens/account';
 import Settings from '../screens/settings';
 import Inspirations from '../screens/inspirations';
@@ -281,6 +282,7 @@ export function AppNavigation() {
             },
             NoteEditor: 'note/:id',
             Devotional: 'devotional/:id',
+            DevotionalArchive: 'devotionals',
             BibleReader: 'passage',
             Account: 'account',
           },
@@ -292,7 +294,8 @@ export function AppNavigation() {
       >
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="NoteEditor" component={NoteEditor} getId={({ params }) => params.id} />
-        <Stack.Screen name="Devotional" component={Devotional} />
+        <Stack.Screen name="Devotional" component={Devotional} getId={({ params }) => params.id} />
+        <Stack.Screen name="DevotionalArchive" component={DevotionalArchive} />
         <Stack.Screen name="BibleReader" component={Bible} />
         <Stack.Screen
           name="AiPlan"

@@ -4,6 +4,7 @@ import { useRoute } from '@react-navigation/native';
 import { goBack, navigate, openBible, openTab } from '../navigation/actions';
 import {
   formatReference,
+  devotionalText,
   publicationDay,
   type Devotional,
   type Note,
@@ -35,7 +36,7 @@ export default function DevotionalScreen() {
   const readingKey = `${id}:${language}:${day}`;
   const verses = reading.key === readingKey ? reading.verses : [];
   const completed = reading.key === readingKey && reading.completed;
-  const text = devotional?.[language];
+  const text = devotional ? devotionalText(devotional, language) : undefined;
   const sw = language === 'sw';
   useEffect(() => {
     let active = true;

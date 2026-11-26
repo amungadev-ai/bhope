@@ -1,3 +1,11 @@
+export function devotionalText(item, language = 'en') {
+  const selected = item[language];
+  if (!selected?.title?.trim() || !selected?.reflection?.trim()) return item.en;
+  return Object.fromEntries(
+    Object.keys(item.en).map((key) => [key, selected[key]?.trim() ? selected[key] : item.en[key]]),
+  );
+}
+
 // Publication days use the ministry's Nairobi timezone, including date filters.
 export function publicationDay(value) {
   if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) return null;
@@ -20,7 +28,9 @@ export function filterDevotionals(
       const day = publicationDay(item.publishAt);
       return (
         (!term ||
-          [item.en.title, item.sw.title].some((title) => title.toLowerCase().includes(term))) &&
+          [item.en.title, item.sw?.title ?? ''].some((title) =>
+            title.toLowerCase().includes(term),
+          )) &&
         (!from || (day && day >= from)) &&
         (!to || (day && day <= to))
       );

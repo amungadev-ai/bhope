@@ -69,6 +69,7 @@ export interface Note {
 }
 export const books: Book[];
 export const devotionalSeeds: Devotional[];
+export function devotionalText(item: Devotional, language?: Language): DevotionalText;
 export function publicationDay(value?: string | null): string | null;
 export function isPublicationDate(value: string): boolean;
 export function filterDevotionals(

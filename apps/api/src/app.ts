@@ -23,6 +23,7 @@ import { aiAccessRoutes, reserveAiRequest } from './ai-access.js';
 import { HttpError } from './errors.js';
 import { inspirationRoutes } from './inspirations.js';
 import { paymentRoutes, givingCapabilities } from './payments.js';
+import { editorialAiRoutes } from './editorial-ai.js';
 
 const textSchema = z.object({
   title: z.string().trim().max(180),
@@ -41,7 +42,25 @@ const devotionalSchema = z.object({
   verseEnd: z.number().int().min(1).max(200),
   minutes: z.number().int().min(1).max(60),
   en: textSchema,
-  sw: textSchema,
+  sw: textSchema
+    .partial()
+    .transform((text) => ({
+      title: '',
+      subtitle: '',
+      reflection: '',
+      application: '',
+      prayer: '',
+      question: '',
+      ...text,
+    }))
+    .default({
+      title: '',
+      subtitle: '',
+      reflection: '',
+      application: '',
+      prayer: '',
+      question: '',
+    }),
 });
 const noteSchema = z.object({
   id: z.string().min(1).max(80),
@@ -97,6 +116,7 @@ export function createApp(
     .map((origin) => origin.trim())
     .filter(Boolean);
   app.use('/api', (req, _res, next) => {
+    _res.set('Cache-Control', 'no-store');
     const origin = req.get('origin');
     if (origin && !allowed.includes(origin))
       return next(new HttpError(403, 'This origin is not allowed.'));
@@ -160,7 +180,9 @@ export function createApp(
       // Only the error CODE is exposed (ER_BAD_DB_ERROR, ER_ACCESS_DENIED_ERROR,
       // ECONNREFUSED, ...) — actionable without leaking database names.
       const err = error as { code?: string };
-      console.error(`Health check failed: ${err.code || (error instanceof Error ? error.message : error)}`);
+      console.error(
+        `Health check failed: ${err.code || (error instanceof Error ? error.message : error)}`,
+      );
       res.json({
         status: 'degraded',
         db: 'error',
@@ -385,11 +407,12 @@ export function createApp(
       input.status === 'published' &&
       (!input.publishAt ||
         !input.devotional.en.title.trim() ||
-        !input.devotional.sw.title.trim() ||
-        !input.devotional.en.reflection.trim() ||
-        !input.devotional.sw.reflection.trim())
+        !input.devotional.en.reflection.trim())
     )
-      throw new HttpError(400, 'Publishing requires a date and both language reflections.');
+      throw new HttpError(
+        400,
+        'Publishing requires a date, English title, and English reflection.',
+      );
     const params = [
       JSON.stringify(input.devotional),
       input.status,
@@ -432,6 +455,44 @@ export function createApp(
       await db.all<User>('SELECT id, email, name, role FROM users ORDER BY created_at DESC'),
     );
   });
+  app.post('/api/v1/studio/editors', authenticate, async (req, res) => {
+    const actor = res.locals.user as User;
+    if (actor.role !== 'admin') throw new HttpError(403, 'Administrator access is required.');
+    const input = z
+      .object({
+        name: z.string().trim().min(1).max(120),
+        email: z
+          .email()
+          .max(254)
+          .transform((value) => value.toLowerCase()),
+        password: z.string().min(10).max(128),
+      })
+      .strict()
+      .parse(req.body);
+    const [existing] = await db.all('SELECT id FROM users WHERE email = ?', [input.email]);
+    if (existing)
+      throw new HttpError(
+        409,
+        'This email already has an account. Find it in People and change its role to Editor.',
+      );
+    let editor: User;
+    try {
+      editor = await createUser(db, { ...input, role: 'editor' });
+    } catch (error) {
+      if (
+        ['ER_DUP_ENTRY', 'SQLITE_CONSTRAINT_UNIQUE'].includes(
+          (error as { code?: string }).code ?? '',
+        )
+      )
+        throw new HttpError(409, 'An account with this email already exists.');
+      throw error;
+    }
+    await db.run(
+      'INSERT INTO audit_events (id, actor_id, action, target_id, created_at) VALUES (?, ?, ?, ?, ?)',
+      [randomUUID(), actor.id, 'editor:create', editor.id, new Date().toISOString()],
+    );
+    res.status(201).json(editor);
+  });
   app.patch('/api/v1/studio/users/:id/role', authenticate, async (req, res) => {
     const actor = res.locals.user as User;
     if (actor.role !== 'admin') throw new HttpError(403, 'Administrator access is required.');
@@ -448,6 +509,7 @@ export function createApp(
     );
     res.status(204).end();
   });
+  app.use('/api/v1', editorialAiRoutes(config, db, authenticate, staff, aiFetch));
   app.post('/api/v1/ai/assist', authenticate, async (req, res) => {
     const input = z
       .object({

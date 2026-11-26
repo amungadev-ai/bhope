@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
 import type { Inspiration } from '@bhope/shared';
-import { api, apiUrl } from '../lib/api';
+import { api } from '../lib/api';
+import { useLiveRefresh } from '../lib/use-live-refresh';
 import { getPreference, setPreference } from '../lib/storage';
 import { useApp } from '../lib/context';
 import { Body, Button, Empty, fonts, Icon, Label, Screen, Title, useUi } from '../components/ui';
@@ -14,21 +15,31 @@ export default function Inspirations() {
   const [active, setActive] = useState('');
   const [error, setError] = useState('');
   const [failed, setFailed] = useState('');
+  const hasFresh = useRef(false);
+  useLiveRefresh(
+    useCallback(async (signal) => {
+      const fresh = await api<Inspiration[]>('/inspirations', { signal, cache: 'no-store' });
+      if (signal.aborted) return;
+      hasFresh.current = true;
+      setItems(fresh);
+      setError('');
+      await setPreference('inspirations-cache', JSON.stringify(fresh));
+    }, []),
+    {
+      onError: () =>
+        setError('Fresh videos are unavailable right now. Saved titles are shown when available.'),
+    },
+  );
   useEffect(() => {
     let alive = true;
     (async () => {
       const cache = await getPreference('inspirations-cache');
-      if (cache && alive) {
+      if (cache && alive && !hasFresh.current) {
         try {
           setItems(JSON.parse(cache));
         } catch {
           /* keep empty */
         }
-      }
-      if (apiUrl) {
-        const fresh = await api<Inspiration[]>('/inspirations');
-        await setPreference('inspirations-cache', JSON.stringify(fresh));
-        if (alive) setItems(fresh);
       }
     })().catch(() => {
       if (alive)

@@ -98,6 +98,32 @@ const gift = () => ({
 function signature(body: string, timestamp = Math.floor(Date.now() / 1000)) {
   return `t=${timestamp},v1=unit-key:${createHmac('sha512', config.PAYSTACK_WEBHOOK_SECRET).update(`${timestamp}.`).update(body).digest('hex')}`;
 }
+test('a stale poll cannot downgrade a concurrently confirmed or reversed payment', async () => {
+  for (const protectedStatus of ['success', 'reversed']) {
+    const guarded = createApp(config, db, fetch, async (input, options) => {
+      if (String(input).includes('/transaction/verify/')) {
+        const reference = decodeURIComponent(String(input).split('/').at(-1)!);
+        await db.run('UPDATE donations SET status = ? WHERE reference = ?', [
+          protectedStatus,
+          reference,
+        ]);
+        resultStatus = 'failed';
+      }
+      return provider(input, options);
+    });
+    const started = (await request(guarded).post('/api/v1/donations').send(gift()).expect(201))
+      .body;
+    const checked = await request(guarded)
+      .post(`/api/v1/donations/${started.donation.id}/refresh?token=${started.token}`)
+      .send({})
+      .expect(200);
+    assert.equal(checked.body.status, protectedStatus);
+    const stored = await request(guarded)
+      .get(`/api/v1/donations/${started.donation.id}?token=${started.token}`)
+      .expect(200);
+    assert.equal(stored.body.status, protectedStatus);
+  }
+});
 test('a new Inspirations feed is empty until a reviewed video is published', async () => {
   assert.deepEqual((await request(app).get('/api/v1/inspirations').expect(200)).body, []);
   const editor = await token('editor'),

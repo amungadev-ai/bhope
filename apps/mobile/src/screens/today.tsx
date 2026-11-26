@@ -1,19 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { navigate, openTab } from '../navigation/actions';
-import { filterDevotionals, formatReference } from '@bhope/shared';
+import { devotionalText, filterDevotionals, formatReference, type Devotional } from '@bhope/shared';
+import { api } from '../lib/api';
+import { useLiveRefresh } from '../lib/use-live-refresh';
 import { useApp } from '../lib/context';
 import { getPassage } from '../lib/storage';
 import { Body, fonts, Icon, Label, Screen, Title, useUi } from '../components/ui';
 export default function Today() {
   const { colors, styles } = useUi();
   const local = makeLocal(colors);
-  const { language, devotionals: cachedDevotionals } = useApp();
+  const { language, devotionals: cachedDevotionals, rememberDevotionals } = useApp();
+  useLiveRefresh(
+    useCallback(
+      async (signal) => {
+        const items = await api<Devotional[]>('/devotionals', { signal, cache: 'no-store' });
+        if (!signal.aborted && items.length) rememberDevotionals(items);
+      },
+      [rememberDevotionals],
+    ),
+  );
   const devotionals = filterDevotionals(cachedDevotionals);
   const [verse, setVerse] = useState('');
   const devotional = devotionals[0];
-  const text = devotional[language];
+  const text = devotionalText(devotional, language);
   const sw = language === 'sw';
   useEffect(() => {
     let active = true;
@@ -135,7 +146,7 @@ export default function Today() {
             </View>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={{ fontFamily: fonts.medium, color: colors.ink, fontSize: 15 }}>
-                {devotionals[1][language].title}
+                {devotionalText(devotionals[1], language).title}
               </Text>
               <Text style={local.quickText}>
                 {formatReference(devotionals[1], language)} · {devotionals[1].minutes} min

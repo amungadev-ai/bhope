@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ArrowLeft,
@@ -11,6 +11,8 @@ import {
   LayoutDashboard,
   Leaf,
   LogOut,
+  Menu,
+  X,
   Plus,
   Search,
   Send,
@@ -47,6 +49,10 @@ import { api } from './api';
 import { InspirationStudio } from './inspirations';
 import { AiAccessStudio } from './ai-access';
 import { GivingStudio } from './giving';
+import { PeopleStudio as People } from './people';
+import { EditorialAssistant } from './editorial-assistant';
+import { PwaControls, registerStudioWorker } from './pwa';
+registerStudioWorker();
 const emptyText = (): DevotionalText => ({
   title: '',
   subtitle: '',
@@ -79,6 +85,43 @@ const readableDate = (value: string | null | undefined) =>
     : 'Not scheduled';
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const controls = () => [
+      ...(menu.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []),
+    ];
+    controls()[0]?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key !== 'Tab') return;
+      const items = controls();
+      const first = items[0];
+      const last = items.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    const resize = () => {
+      if (window.innerWidth >= 1024) setMenuOpen(false);
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', keydown);
+    window.addEventListener('resize', resize);
+    return () => {
+      document.removeEventListener('keydown', keydown);
+      window.removeEventListener('resize', resize);
+      document.body.style.overflow = overflow;
+      previous?.focus();
+    };
+  }, [menuOpen]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
@@ -137,6 +180,9 @@ function App() {
     try {
       await api('/auth/logout', { method: 'POST' });
       setUser(null);
+      setMenuOpen(false);
+      setTab('overview');
+      setOverview(null);
       setEntries([]);
       setEditing(null);
       setError('');
@@ -214,6 +260,7 @@ function App() {
             </button>
           </form>
           <small>Accounts are created by your administrator.</small>
+          <PwaControls />
         </section>
       </main>
     );
@@ -228,7 +275,41 @@ function App() {
   );
   return (
     <div className="workspace">
-      <aside className="sidebar">
+      <div className="mobile-topbar">
+        <button
+          className="icon-control"
+          aria-label="Open studio navigation"
+          aria-expanded={menuOpen}
+          aria-controls="studio-navigation"
+          onClick={() => setMenuOpen(true)}
+        >
+          <Menu size={23} />
+        </button>
+        <span className="brand">
+          <Sun size={22} />
+          beacon of hope<span className="gold">.</span>
+        </span>
+      </div>
+      {menuOpen && (
+        <button
+          className="nav-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+      <aside
+        ref={menu}
+        id="studio-navigation"
+        className={`sidebar ${menuOpen ? 'sidebar-open' : ''}`}
+        aria-label="Studio navigation"
+      >
+        <button
+          className="close-navigation icon-control"
+          aria-label="Close studio navigation"
+          onClick={() => setMenuOpen(false)}
+        >
+          <X size={21} />
+        </button>
         <div className="brand">
           <Sun size={25} />
           <span>
@@ -236,7 +317,7 @@ function App() {
           </span>
         </div>
         <span className="studio-label">EDITORIAL STUDIO</span>
-        <nav>
+        <nav onClick={() => setMenuOpen(false)}>
           <button
             className={tab === 'overview' && !editing ? 'active' : ''}
             onClick={() => {
@@ -305,6 +386,7 @@ function App() {
           )}
         </nav>
         <div className="sidebar-bottom">
+          <PwaControls />
           <div className="sidebar-message">
             <Leaf size={19} />
             <p>
@@ -337,7 +419,13 @@ function App() {
                   ? 'Devotionals'
                   : tab === 'users'
                     ? 'People'
-                    : 'Overview'}
+                    : tab === 'inspirations'
+                      ? 'Inspirations'
+                      : tab === 'ai-access'
+                        ? 'AI access & plans'
+                        : tab === 'giving'
+                          ? 'Giving & reports'
+                          : 'Overview'}
             </span>
           </div>
           <span className="date">
@@ -478,7 +566,7 @@ function App() {
                 <div>
                   <span className="eyebrow">WORDS WITH A PURPOSE</span>
                   <h1>Your devotional library.</h1>
-                  <p>English and Swahili. One message of hope.</p>
+                  <p>English first, with optional Swahili translations.</p>
                 </div>
                 <button className="primary" onClick={() => setEditing(blankEntry())}>
                   <Plus size={17} />
@@ -526,7 +614,7 @@ function App() {
                     <div className="entry-title">
                       <strong>{entry.en.title || 'Untitled devotional'}</strong>
                       <small>
-                        {entry.sw.title || 'Swahili title pending'} · {formatReference(entry)}
+                        {entry.sw.title || 'English'} · {formatReference(entry)}
                       </small>
                     </div>
                     <Status status={entry.status} />
@@ -583,8 +671,7 @@ function WritingRoom({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [outline, setOutline] = useState('');
-  const [aiBusy, setAiBusy] = useState(false);
+  const [translation, setTranslation] = useState(Boolean(entry.sw.title || entry.sw.reflection));
   const text = draft[language];
   const updateText = (field: keyof DevotionalText, value: string) => {
     setNotice('');
@@ -627,32 +714,6 @@ function WritingRoom({
       setBusy(false);
     }
   }
-  async function assist() {
-    if (
-      !confirm(
-        'Send this title and reflection to DeepSeek for an outline? Your existing writing will be kept.',
-      )
-    )
-      return;
-    setAiBusy(true);
-    setError('');
-    try {
-      const result = await api<{ text: string }>('/ai/assist', {
-        method: 'POST',
-        body: JSON.stringify({
-          action: 'outline',
-          text: `${text.title}\n${text.subtitle}\n${text.reflection}`,
-          language,
-          consent: true,
-        }),
-      });
-      setOutline(result.text);
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'AI is unavailable.');
-    } finally {
-      setAiBusy(false);
-    }
-  }
   return (
     <>
       <button className="text-button back" onClick={onClose}>
@@ -663,7 +724,7 @@ function WritingRoom({
         <div>
           <span className="eyebrow">THE WRITING ROOM</span>
           <h1>{text.title || 'A new seed of hope.'}</h1>
-          <p>Thoughtful words, in two languages.</p>
+          <p>Write in English. Add an optional Swahili translation when you are ready.</p>
         </div>
         <Status status={draft.status} />
       </div>
@@ -671,7 +732,7 @@ function WritingRoom({
         <section className="panel editor">
           <div className="editor-top">
             <div className="filters">
-              {(['en', 'sw'] as const).map((value) => (
+              {(translation ? (['en', 'sw'] as const) : (['en'] as const)).map((value) => (
                 <button
                   key={value}
                   className={language === value ? 'selected' : ''}
@@ -681,11 +742,28 @@ function WritingRoom({
                 </button>
               ))}
             </div>
-            <button className="text-button" disabled={aiBusy} onClick={() => void assist()}>
-              <Sparkles size={15} />
-              {aiBusy ? 'Thinking…' : 'Draft with AI'}
-            </button>
+            {!translation && (
+              <button
+                className="text-button"
+                onClick={() => {
+                  setTranslation(true);
+                  setLanguage('sw');
+                }}
+              >
+                + Add Swahili (optional)
+              </button>
+            )}
           </div>
+          <EditorialAssistant
+            key={language}
+            kind="devotional"
+            language={language}
+            reference={formatReference(draft, language)}
+            current={{ ...text }}
+            onApply={(fields) =>
+              setDraft((old) => ({ ...old, [language]: { ...old[language], ...fields } }))
+            }
+          />
           <label>
             Title
             <input
@@ -869,87 +947,12 @@ function WritingRoom({
               </section>
             )}
           </div>
-          {outline && (
-            <section className="panel ai-outline">
-              <span className="eyebrow">AI SUGGESTION · REVIEW BEFORE USING</span>
-              <p>{outline}</p>
-              <button
-                className="secondary"
-                onClick={() => {
-                  updateText('reflection', `${text.reflection}\n\n${outline}`.trim());
-                  setOutline('');
-                }}
-              >
-                <Plus size={15} />
-                Add to reflection
-              </button>
-            </section>
-          )}
           <small>
-            Review both languages before publishing. The API makes scheduled content visible at its
-            publication time.
+            Review the content and any optional translations before publishing. Scheduled content
+            appears at your chosen publication time.
           </small>
         </aside>
       </div>
-    </>
-  );
-}
-function People({ currentUser }: { currentUser: User }) {
-  const [people, setPeople] = useState<User[]>([]);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState('');
-  useEffect(() => {
-    api<User[]>('/studio/users')
-      .then(setPeople)
-      .catch((failure) => setError(failure.message));
-  }, []);
-  async function changeRole(person: User, role: User['role']) {
-    setBusy(person.id);
-    setError('');
-    try {
-      await api(`/studio/users/${person.id}/role`, {
-        method: 'PATCH',
-        body: JSON.stringify({ role }),
-      });
-      setPeople((old) => old.map((item) => (item.id === person.id ? { ...item, role } : item)));
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Could not update this role.');
-    } finally {
-      setBusy('');
-    }
-  }
-  return (
-    <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">PEOPLE & PERMISSIONS</span>
-          <h1>A community of hope.</h1>
-          <p>Give editors room to write, and administrators responsibility to publish.</p>
-        </div>
-      </div>
-      {error && <div className="error">{error}</div>}
-      <section className="panel">
-        {people.map((person) => (
-          <div className="entry-row" key={person.id}>
-            <div className="avatar">{person.name[0]}</div>
-            <div className="entry-title">
-              <strong>{person.name}</strong>
-              <small>{person.email}</small>
-            </div>
-            <select
-              aria-label={`Role for ${person.name}`}
-              disabled={person.id === currentUser.id || busy === person.id}
-              value={person.role}
-              onChange={(event) => void changeRole(person, event.target.value as User['role'])}
-            >
-              <option value="user">Reader</option>
-              <option value="editor">Editor</option>
-              <option value="admin">Administrator</option>
-            </select>
-          </div>
-        ))}
-      </section>
-      <p className="muted">Private notebook content is not available in this dashboard.</p>
     </>
   );
 }

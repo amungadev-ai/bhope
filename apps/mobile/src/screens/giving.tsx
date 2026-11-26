@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Crypto from 'expo-crypto';
 import type { Donation } from '@bhope/shared';
@@ -21,6 +30,7 @@ import {
   useUi,
 } from '../components/ui';
 import { CardCheckout } from '../components/card-checkout';
+import { useLiveRefresh } from '../lib/use-live-refresh';
 type Capabilities = { mpesa: boolean; card: boolean; minimum: number; maximum: number };
 type StartedGift = {
   donation: Donation;
@@ -30,6 +40,7 @@ type StartedGift = {
 };
 const newToken = () => `${Crypto.randomUUID()}${Crypto.randomUUID()}`.replace(/-/g, '');
 export function Giving() {
+  const insets = useSafeAreaInsets();
   const { colors, styles } = useUi();
   const { language, user } = useApp();
   const sw = language === 'sw';
@@ -49,6 +60,12 @@ export function Giving() {
   const [gift, setGift] = useState<StartedGift | null>(null);
   const [checkout, setCheckout] = useState(false);
   const [recoveryReady, setRecoveryReady] = useState(false);
+  const [pollingPaused, setPollingPaused] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const giftRef = useRef(gift);
+  useEffect(() => {
+    giftRef.current = gift;
+  }, [gift]);
   const identity = useRef({ key: Crypto.randomUUID(), token: newToken() });
   useEffect(() => {
     let active = true;
@@ -91,23 +108,51 @@ export function Giving() {
         gift: result,
       }),
     );
-  async function check() {
-    if (!gift) return;
-    setBusy(true);
-    setError('');
+  const refreshPayment = useCallback(async (signal: AbortSignal) => {
+    const current = giftRef.current;
+    if (!current || current.donation.status !== 'pending') return false;
+    setChecking(true);
     try {
       const result = await api<Donation>(
-        `/donations/${gift.donation.id}/refresh${gift.token ? `?token=${gift.token}` : ''}`,
-        { method: 'POST', body: '{}' },
+        `/donations/${current.donation.id}/refresh${current.token ? `?token=${encodeURIComponent(current.token)}` : ''}`,
+        { method: 'POST', body: '{}', signal },
       );
-      setGift((old) => (old ? { ...old, donation: result } : old));
-      await rememberGift({ ...gift, donation: result });
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'The payment status is unavailable.');
+      if (signal.aborted) return;
+      const updated = { ...current, donation: result };
+      giftRef.current = updated;
+      setGift(updated);
+      setError('');
+      try {
+        await setGivingRecovery(
+          JSON.stringify({
+            apiUrl,
+            identity: identity.current,
+            amount: result.amount,
+            method: result.method,
+            gift: updated,
+          }),
+        );
+      } catch {
+        if (!signal.aborted)
+          setError(
+            'Your payment status was updated, but this device could not save the receipt. Keep your payment reference.',
+          );
+      }
+      return result.status === 'pending';
     } finally {
-      setBusy(false);
+      if (!signal.aborted) setChecking(false);
     }
-  }
+  }, []);
+  useLiveRefresh(refreshPayment, {
+    enabled: gift?.donation.status === 'pending' && !pollingPaused && !checkout,
+    intervalMs: 15000,
+    maxAttempts: 20,
+    onLimit: () => setPollingPaused(true),
+    onError: () =>
+      setError(
+        'Confirmation is taking longer. We will keep checking automatically; please do not send another payment.',
+      ),
+  });
   async function give() {
     if (
       !Number.isInteger(Number(amount)) ||
@@ -136,6 +181,7 @@ export function Giving() {
         }),
       });
       setGift(result);
+      setPollingPaused(false);
       await rememberGift(result);
       if (result.checkoutUrl) setCheckout(true);
     } catch (failure) {
@@ -148,233 +194,264 @@ export function Giving() {
   }
   const confirmed = gift?.donation.status === 'success';
   return (
-    <Screen>
-      <View style={{ gap: 10 }}>
-        <Label>{sw ? 'WEMA UNAENDELEA' : 'A LITTLE KINDNESS GOES ON'}</Label>
-        <Title>{sw ? 'Saidia mwanga\nuendelee.' : 'Help keep\nthe light shining.'}</Title>
-        <Body muted>
-          {sw
-            ? 'Kila zawadi ni ya hiari. Tumaini linabaki bure.'
-            : 'Every gift is optional. Hope stays freely available.'}
-        </Body>
-      </View>
-      <View style={[styles.card, { backgroundColor: colors.ink, borderWidth: 0 }]}>
-        <Icon name="heart-outline" size={30} color="#E0D5A9" />
-        <Text style={{ fontFamily: fonts.serif, color: '#F9F8E9', fontSize: 27, lineHeight: 38 }}>
-          {sw
-            ? 'Kwa huduma hii.\nKwa watu wanaohitaji.'
-            : 'For this little space.\nFor people who need hope.'}
-        </Text>
-        <Text style={{ fontFamily: fonts.body, color: '#D0DBCA', fontSize: 13, lineHeight: 23 }}>
-          {sw
-            ? 'Lengo letu ni kuendeleza jukwaa hili na kusaidia watu wenye uhitaji. Tutashiriki taarifa kuhusu matumizi ya fedha.'
-            : 'Our aim is to sustain this platform and support people in need. We will share updates on how funds are used.'}
-        </Text>
-      </View>
-      <View style={{ gap: 14 }}>
-        <Label>{sw ? 'CHAGUA ZAWADI YAKO · KES' : 'CHOOSE YOUR GIFT · KES'}</Label>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-          {[100, 250, 500, 1000].map((value) => (
-            <Pressable
-              accessibilityRole="button"
-              key={value}
-              onPress={() => setAmount(String(value))}
-              style={[
-                styles.chip,
-                { flex: 1, justifyContent: 'center', minWidth: 64, paddingVertical: 15 },
-                amount === String(value) && { backgroundColor: colors.ink },
-              ]}
-            >
-              <Text style={[styles.chipText, amount === String(value) && { color: '#fff' }]}>
-                {value.toLocaleString()}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-        <Input
-          accessibilityLabel="Donation amount in KES"
-          placeholder="Another amount"
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-        />
-      </View>
-      <Button
-        disabled={!recoveryReady}
-        icon="heart-outline"
-        onPress={() => {
-          setSheet(true);
-          setError('');
-        }}
-      >
-        {gift
-          ? sw
-            ? 'Angalia zawadi yako'
-            : 'View your latest gift'
-          : sw
-            ? 'Chagua njia ya kutoa'
-            : 'Choose how to give'}
-      </Button>
-      {!capabilities.mpesa && !capabilities.card ? (
-        <Body muted>
-          {sw
-            ? 'Njia za kutoa zitawezeshwa hivi karibuni.'
-            : 'Giving methods will be available here once the ministry’s payment setup is ready.'}
-        </Body>
-      ) : null}
-      {!user ? (
-        <View style={styles.card}>
-          <Body>
-            You can give as a guest. Sign in first if you want this gift included in your account’s
-            donation history.
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      enabled={Platform.OS !== 'web'}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={insets.top + (Platform.OS === 'ios' ? 44 : 64)}
+    >
+      <Screen>
+        <View style={{ gap: 10 }}>
+          <Label>{sw ? 'WEMA UNAENDELEA' : 'A LITTLE KINDNESS GOES ON'}</Label>
+          <Title>{sw ? 'Saidia mwanga\nuendelee.' : 'Help keep\nthe light shining.'}</Title>
+          <Body muted>
+            {sw
+              ? 'Kila zawadi ni ya hiari. Tumaini linabaki bure.'
+              : 'Every gift is optional. Hope stays freely available.'}
           </Body>
-          <Button secondary onPress={() => navigate('Account')}>
-            Sign in for giving history
-          </Button>
         </View>
-      ) : null}
-      <Body muted>
-        Daily devotionals, Bible reading, and your notebook remain free. Giving does not unlock
-        content or features.
-      </Body>
-      <Sheet
-        visible={sheet}
-        title={
-          confirmed
-            ? sw
-              ? 'Asante kwa tumaini.'
-              : 'Thank you for a little hope.'
-            : sw
-              ? 'Zawadi yako ya tumaini'
-              : 'Your gift of hope'
-        }
-        onClose={() => {
-          setSheet(false);
-          setCheckout(false);
-        }}
-      >
-        {gift ? (
-          <>
-            {confirmed ? (
-              <Icon name="checkmark-circle-outline" size={42} color={colors.green} />
-            ) : null}
-            <Title style={{ fontSize: 30 }}>KES {gift.donation.amount.toLocaleString()}</Title>
-            <Body>
-              {gift.donation.status === 'success'
-                ? 'Your gift has been confirmed. Thank you for helping this ministry grow.'
-                : gift.donation.status === 'failed'
-                  ? 'This payment was not completed. No successful donation has been recorded.'
-                  : gift.donation.status === 'reversed'
-                    ? 'The provider reports that this payment was reversed.'
-                    : gift.message ||
-                      (gift.donation.method === 'mpesa'
-                        ? 'Check your phone for the M-Pesa prompt. Your donation remains pending until Safaricom confirms it.'
-                        : 'Complete your payment in Paystack’s secure checkout. We will verify it with the provider.')}
-            </Body>
-            {checkout && gift.checkoutUrl ? (
-              <CardCheckout
-                url={gift.checkoutUrl}
-                onFinished={() => {
-                  setCheckout(false);
-                  void check();
-                }}
-                onError={() =>
-                  setError(
-                    'Checkout could not load. Check the payment status before starting another gift.',
-                  )
-                }
-              />
-            ) : null}
-            {gift.donation.status === 'pending' ? (
-              <>
-                {gift.checkoutUrl && !checkout ? (
-                  <Button secondary onPress={() => setCheckout(true)}>
-                    Resume secure card checkout
-                  </Button>
-                ) : null}
-                <Button secondary busy={busy} onPress={() => void check()} icon="refresh-outline">
-                  Check payment status
-                </Button>
-              </>
-            ) : (
-              <Button
-                secondary
-                onPress={() => {
-                  void clearGivingRecovery()
-                    .then(() => {
-                      setGift(null);
-                      identity.current = { key: Crypto.randomUUID(), token: newToken() };
-                    })
-                    .catch(() =>
-                      setError('The previous gift could not be cleared. Please try again.'),
-                    );
-                }}
+        <View style={[styles.card, { backgroundColor: colors.ink, borderWidth: 0 }]}>
+          <Icon name="heart-outline" size={30} color="#E0D5A9" />
+          <Text style={{ fontFamily: fonts.serif, color: '#F9F8E9', fontSize: 27, lineHeight: 38 }}>
+            {sw
+              ? 'Kwa huduma hii.\nKwa watu wanaohitaji.'
+              : 'For this little space.\nFor people who need hope.'}
+          </Text>
+          <Text style={{ fontFamily: fonts.body, color: '#D0DBCA', fontSize: 13, lineHeight: 23 }}>
+            {sw
+              ? 'Lengo letu ni kuendeleza jukwaa hili na kusaidia watu wenye uhitaji. Tutashiriki taarifa kuhusu matumizi ya fedha.'
+              : 'Our aim is to sustain this platform and support people in need. We will share updates on how funds are used.'}
+          </Text>
+        </View>
+        <View style={{ gap: 14 }}>
+          <Label>{sw ? 'CHAGUA ZAWADI YAKO · KES' : 'CHOOSE YOUR GIFT · KES'}</Label>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {[100, 250, 500, 1000].map((value) => (
+              <Pressable
+                accessibilityRole="button"
+                key={value}
+                onPress={() => setAmount(String(value))}
+                style={[
+                  styles.chip,
+                  { flex: 1, justifyContent: 'center', minWidth: 64, paddingVertical: 15 },
+                  amount === String(value) && { backgroundColor: colors.ink },
+                ]}
               >
-                Start a new gift
-              </Button>
-            )}
-            <Body muted>Reference: {gift.donation.reference}</Body>
-          </>
-        ) : (
-          <>
-            <Title style={{ fontSize: 30 }}>KES {Number(amount || 0).toLocaleString()}</Title>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {(['mpesa', 'card'] as const).map((value) => (
-                <Pressable
-                  accessibilityRole="button"
-                  key={value}
-                  onPress={() => setMethod(value)}
-                  style={[
-                    styles.chip,
-                    { flex: 1, justifyContent: 'center', paddingVertical: 15 },
-                    method === value && { backgroundColor: colors.ink },
-                  ]}
-                >
-                  <Icon
-                    name={value === 'mpesa' ? 'phone-portrait-outline' : 'card-outline'}
-                    color={method === value ? '#fff' : colors.ink}
-                    size={18}
-                  />
-                  <Text style={[styles.chipText, method === value && { color: '#fff' }]}>
-                    {value === 'mpesa' ? 'M-Pesa' : 'Card'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            {method === 'mpesa' ? (
-              <Input
-                accessibilityLabel="M-Pesa phone number"
-                placeholder="07… or 2547…"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
-            ) : (
-              <Input
-                accessibilityLabel="Receipt email"
-                placeholder="Email for your receipt"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email || user?.email || ''}
-                onChangeText={setEmail}
-              />
-            )}
-            <Body muted>
-              {method === 'mpesa'
-                ? 'Safaricom will ask you to confirm the amount on your phone. Your M-Pesa PIN stays with Safaricom.'
-                : 'Enter card details directly in Paystack’s hosted checkout. Beacon of Hope does not receive your card number or security code.'}
+                <Text style={[styles.chipText, amount === String(value) && { color: '#fff' }]}>
+                  {value.toLocaleString()}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Input
+            accessibilityLabel="Donation amount in KES"
+            placeholder="Another amount"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="numeric"
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
+          />
+        </View>
+        <Button
+          disabled={!recoveryReady}
+          icon="heart-outline"
+          onPress={() => {
+            Keyboard.dismiss();
+            setSheet(true);
+            setError('');
+          }}
+        >
+          {gift
+            ? sw
+              ? 'Angalia zawadi yako'
+              : 'View your latest gift'
+            : sw
+              ? 'Chagua njia ya kutoa'
+              : 'Choose how to give'}
+        </Button>
+        {!capabilities.mpesa && !capabilities.card ? (
+          <Body muted>
+            {sw
+              ? 'Njia za kutoa zitawezeshwa hivi karibuni.'
+              : 'Giving methods will be available here once the ministry’s payment setup is ready.'}
+          </Body>
+        ) : null}
+        {!user ? (
+          <View style={styles.card}>
+            <Body>
+              You can give as a guest. Sign in first if you want this gift included in your
+              account’s donation history.
             </Body>
-            {!capabilities[method] ? (
-              <Body muted>This payment method is not available yet.</Body>
-            ) : null}
-            <Button disabled={!capabilities[method]} busy={busy} onPress={() => void give()}>
-              {method === 'mpesa' ? 'Request M-Pesa prompt' : 'Continue to secure card checkout'}
+            <Button secondary onPress={() => navigate('Account')}>
+              Sign in for giving history
             </Button>
-          </>
-        )}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </Sheet>
-    </Screen>
+          </View>
+        ) : null}
+        <Body muted>
+          Daily devotionals, Bible reading, and your notebook remain free. Giving does not unlock
+          content or features.
+        </Body>
+        <Sheet
+          visible={sheet}
+          title={
+            confirmed
+              ? sw
+                ? 'Asante kwa tumaini.'
+                : 'Thank you for a little hope.'
+              : sw
+                ? 'Zawadi yako ya tumaini'
+                : 'Your gift of hope'
+          }
+          onClose={() => {
+            setSheet(false);
+            setCheckout(false);
+          }}
+        >
+          {gift ? (
+            <>
+              {confirmed ? (
+                <Icon name="checkmark-circle-outline" size={42} color={colors.green} />
+              ) : null}
+              <Title style={{ fontSize: 30 }}>KES {gift.donation.amount.toLocaleString()}</Title>
+              <Body>
+                {gift.donation.status === 'success'
+                  ? 'Your gift has been confirmed. Thank you for helping this ministry grow.'
+                  : gift.donation.status === 'failed'
+                    ? 'This payment was not completed. No successful donation has been recorded.'
+                    : gift.donation.status === 'reversed'
+                      ? 'The provider reports that this payment was reversed.'
+                      : gift.message ||
+                        (gift.donation.method === 'mpesa'
+                          ? 'Check your phone for the M-Pesa prompt. Your donation remains pending until Safaricom confirms it.'
+                          : 'Complete your payment in Paystack’s secure checkout. We will verify it with the provider.')}
+              </Body>
+              {checkout && gift.checkoutUrl ? (
+                <CardCheckout
+                  url={gift.checkoutUrl}
+                  onFinished={() => {
+                    setCheckout(false);
+                    setPollingPaused(false);
+                  }}
+                  onError={() =>
+                    setError(
+                      'Checkout could not load. Check the payment status before starting another gift.',
+                    )
+                  }
+                />
+              ) : null}
+              {gift.donation.status === 'pending' ? (
+                <>
+                  {gift.checkoutUrl && !checkout ? (
+                    <Button secondary onPress={() => setCheckout(true)}>
+                      Resume secure card checkout
+                    </Button>
+                  ) : null}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    {!pollingPaused ? (
+                      <ActivityIndicator size="small" color={colors.green} />
+                    ) : null}
+                    <Body muted>
+                      {pollingPaused
+                        ? 'This payment is still pending. Resume checks when you are ready.'
+                        : checking
+                          ? 'Verifying your payment…'
+                          : 'Waiting for confirmation. Status updates automatically.'}
+                    </Body>
+                  </View>
+                  {pollingPaused ? (
+                    <Button
+                      secondary
+                      onPress={() => {
+                        setError('');
+                        setPollingPaused(false);
+                      }}
+                      icon="refresh-outline"
+                    >
+                      Resume payment checks
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
+                <Button
+                  secondary
+                  onPress={() => {
+                    void clearGivingRecovery()
+                      .then(() => {
+                        setGift(null);
+                        identity.current = { key: Crypto.randomUUID(), token: newToken() };
+                      })
+                      .catch(() =>
+                        setError('The previous gift could not be cleared. Please try again.'),
+                      );
+                  }}
+                >
+                  Start a new gift
+                </Button>
+              )}
+              <Body muted>Reference: {gift.donation.reference}</Body>
+            </>
+          ) : (
+            <>
+              <Title style={{ fontSize: 30 }}>KES {Number(amount || 0).toLocaleString()}</Title>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {(['mpesa', 'card'] as const).map((value) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={value}
+                    onPress={() => setMethod(value)}
+                    style={[
+                      styles.chip,
+                      { flex: 1, justifyContent: 'center', paddingVertical: 15 },
+                      method === value && { backgroundColor: colors.ink },
+                    ]}
+                  >
+                    <Icon
+                      name={value === 'mpesa' ? 'phone-portrait-outline' : 'card-outline'}
+                      color={method === value ? '#fff' : colors.ink}
+                      size={18}
+                    />
+                    <Text style={[styles.chipText, method === value && { color: '#fff' }]}>
+                      {value === 'mpesa' ? 'M-Pesa' : 'Card'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              {method === 'mpesa' ? (
+                <Input
+                  accessibilityLabel="M-Pesa phone number"
+                  placeholder="07… or 2547…"
+                  keyboardType="phone-pad"
+                  value={phone}
+                  onChangeText={setPhone}
+                />
+              ) : (
+                <Input
+                  accessibilityLabel="Receipt email"
+                  placeholder="Email for your receipt"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email || user?.email || ''}
+                  onChangeText={setEmail}
+                />
+              )}
+              <Body muted>
+                {method === 'mpesa'
+                  ? 'Safaricom will ask you to confirm the amount on your phone. Your M-Pesa PIN stays with Safaricom.'
+                  : 'Enter card details directly in Paystack’s hosted checkout. Beacon of Hope does not receive your card number or security code.'}
+              </Body>
+              {!capabilities[method] ? (
+                <Body muted>This payment method is not available yet.</Body>
+              ) : null}
+              <Button disabled={!capabilities[method]} busy={busy} onPress={() => void give()}>
+                {method === 'mpesa' ? 'Request M-Pesa prompt' : 'Continue to secure card checkout'}
+              </Button>
+            </>
+          )}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </Sheet>
+      </Screen>
+    </KeyboardAvoidingView>
   );
 }
 export function DonationHistory() {

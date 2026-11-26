@@ -243,12 +243,14 @@ export function paymentRoutes(
         status = 'failed';
     }
     if (status !== row.status)
-      await db.run('UPDATE donations SET status = ?, updated_at = ? WHERE id = ?', [
-        status,
-        now,
-        row.id,
-      ]);
-    return { ...row, status, updated_at: status !== row.status ? now : row.updated_at };
+      await db.run(
+        "UPDATE donations SET status = ?, updated_at = ? WHERE id = ? AND status <> 'reversed' AND (status <> 'success' OR ? = 'reversed')",
+        [status, now, row.id, status],
+      );
+    // A callback may have confirmed the gift while this verification was in flight.
+    // Return the latest stored state and never let an older failure undo success.
+    const [latest] = await db.all<DonationRow>('SELECT * FROM donations WHERE id = ?', [row.id]);
+    return latest ?? row;
   }
   router.post('/donations', limits, async (req, res) => {
     const input = z
@@ -453,7 +455,7 @@ export function paymentRoutes(
     res
       .type('html')
       .send(
-        '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beacon of Hope</title></head><body style="background:#f7f7f0;color:#193b32;font-family:system-ui;padding:40px"><h1>Thank you for a little hope.</h1><p>Return to Beacon of Hope to check your payment status.</p></body></html>',
+        '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beacon of Hope</title></head><body style="background:#f7f7f0;color:#193b32;font-family:system-ui;padding:40px"><h1>Thank you for a little hope.</h1><p>Return to Beacon of Hope. Your payment status updates automatically.</p></body></html>',
       ),
   );
   router.get('/studio/donations', authenticate, async (_req, res) => {

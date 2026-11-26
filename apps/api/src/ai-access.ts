@@ -109,7 +109,7 @@ export function aiAccessRoutes(db: Database, config: Config, authenticate: Reque
     if ((res.locals.user as User).role !== 'admin')
       throw new HttpError(403, 'Administrator access is required.');
     const items = await db.all(
-      'SELECT u.id, u.name, u.email, COALESCE(a.free_used, 0) AS freeUsed, a.paid_until AS paidUntil FROM users u LEFT JOIN ai_access a ON a.user_id = u.id ORDER BY u.created_at DESC LIMIT 500',
+      'SELECT u.id, u.name, u.email, u.role, COALESCE(a.free_used, 0) AS freeUsed, a.paid_until AS paidUntil FROM users u LEFT JOIN ai_access a ON a.user_id = u.id ORDER BY u.created_at DESC LIMIT 500',
     );
     res.json({
       items,

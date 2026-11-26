@@ -1,6 +1,8 @@
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -71,6 +73,7 @@ export function Screen({
         <ScrollView
           contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {children}
@@ -238,7 +241,11 @@ export function Sheet({
   const { styles } = useUi();
   return (
     <Modal visible={visible} onRequestClose={onClose} animationType="slide" transparent>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        enabled={Platform.OS !== 'web'}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <Pressable
           accessibilityLabel="Close dialog"
           onPress={onClose}
@@ -260,7 +267,7 @@ export function Sheet({
           </ScrollView>
           {footer}
         </SafeAreaView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

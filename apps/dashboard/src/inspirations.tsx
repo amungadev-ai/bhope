@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, BookOpen, Check, PlayCircle, Plus, Send } from 'lucide-react';
 import { getTikTokPlayerUrl, getTikTokVideoId, type Inspiration } from '@bhope/shared';
 import { api } from './api';
+import { EditorialAssistant } from './editorial-assistant';
 const blank = (): Inspiration => ({
   id: crypto.randomUUID(),
   title: '',
@@ -128,20 +129,28 @@ export function InspirationStudio({ role }: { role: string }) {
                 ? `Video ID: ${getTikTokVideoId(editing.url)}`
                 : 'Use the full public video link. Profile links and shortened links are not featured videos.'}
             </small>
+            <EditorialAssistant
+              kind="inspiration"
+              reference={editing.url}
+              current={{ title: editing.title, description: editing.description }}
+              onApply={(fields) =>
+                setEditing((old) =>
+                  old
+                    ? {
+                        ...old,
+                        title: fields.title ?? old.title,
+                        description: fields.description ?? old.description,
+                      }
+                    : old,
+                )
+              }
+            />
             <label>
               English title
               <input
                 maxLength={180}
                 value={editing.title}
                 onChange={(event) => change('title', event.target.value)}
-              />
-            </label>
-            <label>
-              Swahili title
-              <input
-                maxLength={180}
-                value={editing.titleSw}
-                onChange={(event) => change('titleSw', event.target.value)}
               />
             </label>
             <label>
@@ -153,15 +162,30 @@ export function InspirationStudio({ role }: { role: string }) {
                 onChange={(event) => change('description', event.target.value)}
               />
             </label>
-            <label>
-              Swahili introduction
-              <textarea
-                maxLength={2000}
-                rows={4}
-                value={editing.descriptionSw}
-                onChange={(event) => change('descriptionSw', event.target.value)}
-              />
-            </label>
+            <details className="optional-translation">
+              <summary>
+                Add Swahili translation <span>Optional</span>
+              </summary>
+              <div className="translation-fields">
+                <label>
+                  Swahili title
+                  <input
+                    maxLength={180}
+                    value={editing.titleSw}
+                    onChange={(event) => change('titleSw', event.target.value)}
+                  />
+                </label>
+                <label>
+                  Swahili introduction
+                  <textarea
+                    maxLength={2000}
+                    rows={4}
+                    value={editing.descriptionSw}
+                    onChange={(event) => change('descriptionSw', event.target.value)}
+                  />
+                </label>
+              </div>
+            </details>
             <label>
               Theme
               <select
@@ -236,8 +260,12 @@ export function InspirationStudio({ role }: { role: string }) {
                   Preview on TikTok
                 </button>
               )}
-              <h3 style={{ marginTop: 24 }}>{editing.titleSw}</h3>
-              <p className="subtitle">{editing.descriptionSw}</p>
+              {editing.titleSw && (
+                <>
+                  <h3 style={{ marginTop: 24 }}>{editing.titleSw}</h3>
+                  <p className="subtitle">{editing.descriptionSw}</p>
+                </>
+              )}
             </div>
             <small>
               Previewing loads TikTok. Confirm the video is appropriate and public before
@@ -264,7 +292,7 @@ export function InspirationStudio({ role }: { role: string }) {
                 <div className="entry-title">
                   <strong>{item.title || 'Untitled video'}</strong>
                   <small>
-                    {item.titleSw || 'Swahili title pending'} · {item.category}
+                    {item.titleSw || 'English'} · {item.category}
                   </small>
                 </div>
                 <span className={`status ${item.status}`}>

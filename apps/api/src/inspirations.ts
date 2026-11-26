@@ -21,9 +21,9 @@ const unpack = (row: Row) => ({
 const schema = z.object({
   id: z.string().regex(/^[a-z0-9-]{1,80}$/),
   title: z.string().trim().max(180),
-  titleSw: z.string().trim().max(180),
+  titleSw: z.string().trim().max(180).default(''),
   description: z.string().max(2000),
-  descriptionSw: z.string().max(2000),
+  descriptionSw: z.string().max(2000).default(''),
   category: z.string().trim().min(1).max(40),
   url: z
     .string()
@@ -70,8 +70,8 @@ export function inspirationRoutes(
         403,
         'An administrator must approve published videos and changes to them.',
       );
-    if (input.status === 'published' && (!input.publishAt || !input.title || !input.titleSw))
-      throw new HttpError(400, 'Publishing requires both titles and a publication date.');
+    if (input.status === 'published' && (!input.publishAt || !input.title))
+      throw new HttpError(400, 'Publishing requires an English title and a publication date.');
     const { status, publishAt, ...payload } = input;
     const values = [JSON.stringify(payload), status, publishAt, new Date().toISOString()];
     if (existing)

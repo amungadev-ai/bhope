@@ -17,7 +17,13 @@ Connect the computer and phone to the same Wi-Fi, then scan the terminal QR code
 
 After the first clone, get updates with `git pull` followed by `npm ci`. Use `npm start -- --clear` after changing Bible imports or environment settings. Development on a physical Android phone does not require Android Studio.
 
-## What works in version 0.6.2
+## Current development features
+
+The latest studio update adds mobile navigation, PWA installation, optional
+Swahili translations, structured AI drafting/refinement for both content
+types, direct editor creation, and redesigned AI access management. Mobile
+feeds refresh automatically, and giving avoids the keyboard and polls pending
+payments. See [studio and connected flows](docs/STUDIO.md) for usage and deployment.
 
 - English/Swahili devotional reading with a fixed back/title/subtitle/reading-time header, safe-area bottom spacing, passage links, reflection prompts, and locally saved completion. Past devotionals opens a searchable library after Keep growing on Home, with publication-date ranges, newest/oldest sorting, pagination, and cached offline reading. Publication days follow Nairobi time; undated bundled reflections stay labelled as saved readings.
 - Direct React Navigation 7 with five tabs: Today, Bible, Notebook, Inspiration, and More. The drawer is nested under More; Home also offers a shortcut. Fixed headers leave reading content scrollable underneath.
@@ -27,7 +33,7 @@ After the first clone, get updates with `git pull` followed by `npm ci`. Use `np
 - Automatic English/Swahili Scripture references, including aliases (`John`, `jhon`, `joh`, `jhn`, `jon`, `jn`, `Yohana`) and spaced verse ranges such as `John 1: 1-10`. Tap blue references to place the cursor and edit their characters. Long press opens a passage preview with save/copy/share and note actions already visible. There are no duplicate verse chips or Bible footer shortcut. Bible reading can return a passage to the current note without losing its title or content. Detection works offline.
 - More is a personal reading corner: a reflection prompt, real notebook/saved-verse counts, the latest note, and a saved Scripture. Account, preferences, AI plans, and giving remain in its drawer.
 - Optional DeepSeek summaries and reflection questions under a floating reflection-tools button. It starts at the bottom right of the editor, can be dragged within the writing area, and stays within bounds when the keyboard or layout changes. Dragging does not open tools or send a request. Sign-in and consent are requested at that point; suggestions are reviewed before insertion. Daily reading and local notes do not require an account. AI has five free uses once per reader account; failed provider responses restore the free credit. The continued-access plan is KES 150/month with a daily request limit. Store checkout is not configured and no recurring charges are started. See [AI access](docs/AI_ACCESS.md).
-- Separate editor/admin views in the web studio: bilingual drafts, live preview, submission for review, admin publication/scheduling, and admin role management.
+- Separate editor/admin views in the web studio: English drafts with optional Swahili, live preview, reviewed AI suggestions, submission for review, admin publication/scheduling, and team management.
 - Curated Inspirations with individual TikTok players, editor drafts/review and admin publication/scheduling. The feed starts empty until real videos are selected; the ministry profile link remains in the drawer.
 - Optional KES donations: M-Pesa STK prompts and hosted Paystack card checkout in a bottom sheet, account-linked donation history, and admin finance reports. Payment methods stay disabled until server credentials and public HTTPS callbacks are configured. No live payment has been tested. See [giving setup](docs/GIVING.md).
 

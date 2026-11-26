@@ -7,7 +7,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   try {
     response = await fetch(`${apiUrl}${path}`, {
       ...options,
-      signal: AbortSignal.timeout(35000),
+      signal: options.signal ?? AbortSignal.timeout(35000),
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

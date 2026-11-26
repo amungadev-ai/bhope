@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import {
   filterDevotionals,
+  devotionalText,
   formatReference,
   isPublicationDate,
   publicationDay,
@@ -290,7 +291,7 @@ export default function DevotionalArchive() {
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={item[language].title}
+            accessibilityLabel={devotionalText(item, language).title}
             onPress={() => {
               rememberDevotionals([item]);
               navigate('Devotional', { id: item.id });
@@ -306,13 +307,13 @@ export default function DevotionalArchive() {
             <Text
               style={{ fontFamily: fonts.serif, fontSize: 23, lineHeight: 31, color: colors.ink }}
             >
-              {item[language].title}
+              {devotionalText(item, language).title}
             </Text>
             <Text
               numberOfLines={2}
               style={{ fontFamily: fonts.body, fontSize: 13, lineHeight: 21, color: colors.muted }}
             >
-              {item[language].subtitle}
+              {devotionalText(item, language).subtitle}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Icon name="book-outline" size={13} color={colors.green} />

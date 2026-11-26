@@ -14,13 +14,17 @@ Run this from the repository root on your computer. For a fresh clone, install d
 
 Upload the **contents** of `.local/deploy-api/` into `hope_api`. The package contains compiled API code, the compiled studio, SQL migrations, staff tools, shared JavaScript, and a backend-only package.json. It contains no `.env`, local databases, or complete licensed Bible texts.
 
-On Windows, you can zip the prepared contents for File Manager upload:
+The preparation command also creates **`.local/bhope-api-portable.zip`** for File Manager upload. The archive uses forward slashes in its internal paths on Windows and Linux. It contains explicit folder entries, including `public/`, `public/console/`, `dist/`, and `migrations/`.
+
+To zip an already prepared package again without rebuilding:
 
 ```powershell
-Compress-Archive -Path .\.local\deploy-api\* -DestinationPath .\.local\bhope-api.zip -Force
+npm run deploy:zip
 ```
 
 Upload the archive through DirectAdmin File Manager and extract its contents into the application root. Check that `package.json`, `app.cjs`, `dist/`, and `public/` are directly inside `hope_api`, rather than inside an extra `deploy-api` directory. The settings are documented here; enter secrets in the Node manager instead of adding them to the archive.
+
+If File Manager lists a name such as `public\console\index.html` as a single file, the archive used Windows backslashes and the extractor treated them as filename characters. This affects all subdirectories, including the API and SQL migrations. Move the incorrectly extracted files and old archives to Trash, upload the complete `bhope-api-portable.zip`, and extract it directly into `hope_api`. Confirm you can open the real folders `public` → `console` and see `index.html`. Repack the full deployment with the command above; creating an empty `public` folder would leave the compiled dashboard missing.
 
 ## 2. Configure the domain and Node application
 

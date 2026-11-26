@@ -1,6 +1,7 @@
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { createDeploymentArchive } from './zip-api.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = `${root}/.local/deploy-api`;
 await rm(output, { recursive: true, force: true });
@@ -38,3 +39,4 @@ console.log(
 console.log(
   'No credentials, private Bible data, or local databases are included. See docs/DIRECTADMIN.md.',
 );
+await createDeploymentArchive();

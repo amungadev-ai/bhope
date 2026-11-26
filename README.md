@@ -17,7 +17,7 @@ Connect the computer and phone to the same Wi-Fi, then scan the terminal QR code
 
 After the first clone, get updates with `git pull` followed by `npm ci`. Use `npm start -- --clear` after changing Bible imports or environment settings. Development on a physical Android phone does not require Android Studio.
 
-## What works in version 0.6.0
+## What works in version 0.6.1
 
 - English/Swahili devotional reading with a fixed back/title/subtitle/reading-time header, safe-area bottom spacing, passage links, reflection prompts, and locally saved completion. Past devotionals opens a searchable library after Keep growing on Home, with publication-date ranges, newest/oldest sorting, pagination, and cached offline reading. Publication days follow Nairobi time; undated bundled reflections stay labelled as saved readings.
 - Direct React Navigation 7 with five tabs: Today, Bible, Notebook, Inspiration, and More. The drawer is nested under More; Home also offers a shortcut. Fixed headers leave reading content scrollable underneath.
@@ -46,7 +46,7 @@ npm start -- --clear
 
 On Windows, supply your own quoted paths, for example `"C:\Users\YourName\Downloads\EnglishNIVBible.xml"`.
 
-The importer validates XML, rejects custom entities, checks reference ranges and duplicates, preserves the translation's own verse numbering, and writes `.local/bible.json`. The supplied files were tested: **31,102 verses per language, 66 books per language**. The app automatically bundles the local library and prepares its SQLite database on first launch. Preparation may take a moment. Importing a new library preserves notebook entries and bookmarks.
+The importer validates XML, rejects custom entities, checks reference ranges and duplicates, preserves the translation's own verse numbering, and writes `.local/bible.json`. The supplied files were tested: **31,102 verses per language, 66 books per language**. Metro explicitly watches the generated Bible file while excluding other `.local` content. The app automatically bundles the local library and prepares its SQLite database on first launch. Preparation may take a moment. Importing a new library preserves notebook entries and bookmarks.
 
 Full Bible texts, generated imports, environment files, and databases are excluded from Git. Confirm the appropriate edition and publisher permissions for app distribution, offline access, and AI use before distributing a build containing licensed translations. NIV AI use requires specific permission from Biblica: https://www.biblica.com/permissions/ . The uploaded Swahili file identifies itself as SRUV, © 2005 Bible Society of Kenya and Bible Society of Tanzania.
 

@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
 import { Pressable, View, type GestureResponderEvent } from 'react-native';
 import { Icon, useUi } from './ui';
-const size = 54;
-const inset = 10;
+const size = 46;
+const inset = 8;
+// Keep a generous touch area around the smaller visible bubble.
+const touchPadding = 4;
 type Anchor = { x: number; y: number };
 type Bounds = { width: number; height: number };
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
@@ -69,15 +71,18 @@ export function DraggableAiAction({
       testID="draggable-ai-action"
       style={{
         position: 'absolute',
-        left: inset + anchor.x * (bounds.width - size - inset * 2),
-        top: inset + anchor.y * (bounds.height - size - inset * 2),
-        width: size,
-        height: size,
+        left: inset - touchPadding + anchor.x * (bounds.width - size - inset * 2),
+        top: inset - touchPadding + anchor.y * (bounds.height - size - inset * 2),
+        width: size + touchPadding * 2,
+        height: size + touchPadding * 2,
+        alignItems: 'center',
+        justifyContent: 'center',
         zIndex: 3,
       }}
     >
       <Pressable
         accessibilityRole="button"
+        hitSlop={touchPadding}
         accessibilityLabel="Reflection tools"
         accessibilityHint="Tap for AI reflection tools. Drag to move within your note."
         accessibilityActions={[{ name: 'resetPosition', label: 'Move to bottom right' }]}
@@ -98,11 +103,11 @@ export function DraggableAiAction({
           justifyContent: 'center',
           backgroundColor: colors.ink,
           opacity: dragging ? 0.8 : 1,
-          elevation: 5,
-          boxShadow: '0 4px 14px #00000020',
+          elevation: 4,
+          boxShadow: '0 3px 10px #00000020',
         }}
       >
-        <Icon name="sparkles-outline" size={24} color="#fff" />
+        <Icon name="sparkles-outline" size={20} color="#fff" />
       </Pressable>
     </View>
   );

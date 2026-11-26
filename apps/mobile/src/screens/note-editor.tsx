@@ -203,7 +203,7 @@ export default function NoteScreen() {
   const header = (
     <View
       style={{
-        paddingHorizontal: 16,
+        paddingHorizontal: 12,
         paddingTop: 5,
         paddingBottom: 10,
         flexDirection: 'row',
@@ -228,7 +228,7 @@ export default function NoteScreen() {
         enabled={Platform.OS !== 'web'}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={{ paddingHorizontal: 22, paddingBottom: 12, gap: 10 }}>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}>
           <Input
             accessibilityLabel="Note title"
             placeholder={sw ? 'Wazo lako linaanza hapa…' : 'Give this moment a title…'}
@@ -248,59 +248,67 @@ export default function NoteScreen() {
               paddingVertical: 0,
             }}
           />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Edit note details"
-            onPress={() => {
-              Keyboard.dismiss();
-              setDialog('details');
-            }}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 24 }}
-          >
-            <Icon
-              name={note.kind === 'sermon' ? 'mic-outline' : 'leaf-outline'}
-              size={13}
-              color={colors.muted}
-            />
-            <Text
-              numberOfLines={1}
-              style={{ flexShrink: 1, fontFamily: fonts.body, color: colors.muted, fontSize: 11 }}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Edit note details"
+              onPress={() => {
+                Keyboard.dismiss();
+                setDialog('details');
+              }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                minHeight: 36,
+                flex: 1,
+                minWidth: 0,
+              }}
             >
-              {note.kind === 'sermon'
-                ? [sw ? 'Mahubiri' : 'Sermon', note.preacher, note.church]
-                    .filter(Boolean)
-                    .join(' · ')
-                : sw
-                  ? 'Tafakari binafsi'
-                  : 'Personal reflection'}
-            </Text>
-            <Icon name="chevron-down" size={12} color={colors.muted} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              sidebarOpen ? 'Collapse formatting sidebar' : 'Open formatting sidebar'
-            }
-            accessibilityState={{ expanded: sidebarOpen }}
-            aria-expanded={sidebarOpen}
-            onPress={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              alignSelf: 'flex-start',
-              gap: 8,
-              paddingHorizontal: 12,
-              minHeight: 34,
-              borderRadius: 11,
-              backgroundColor: colors.soft,
-            }}
-          >
-            <Icon name="options-outline" size={17} />
-            <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.ink }}>
-              {sw ? 'Mpangilio' : 'Format'}
-            </Text>
-            <Icon name={sidebarOpen ? 'chevron-back' : 'chevron-forward'} size={13} />
-          </Pressable>
+              <Icon
+                name={note.kind === 'sermon' ? 'mic-outline' : 'leaf-outline'}
+                size={13}
+                color={colors.muted}
+              />
+              <Text
+                numberOfLines={1}
+                style={{ flexShrink: 1, fontFamily: fonts.body, color: colors.muted, fontSize: 11 }}
+              >
+                {note.kind === 'sermon'
+                  ? [sw ? 'Mahubiri' : 'Sermon', note.preacher, note.church]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : sw
+                    ? 'Tafakari binafsi'
+                    : 'Personal reflection'}
+              </Text>
+              <Icon name="chevron-down" size={12} color={colors.muted} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                sidebarOpen ? 'Collapse formatting sidebar' : 'Open formatting sidebar'
+              }
+              accessibilityState={{ expanded: sidebarOpen }}
+              aria-expanded={sidebarOpen}
+              onPress={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 10,
+                minHeight: 36,
+                borderRadius: 11,
+                backgroundColor: colors.soft,
+              }}
+            >
+              <Icon name="options-outline" size={17} />
+              <Text style={{ fontFamily: fonts.medium, fontSize: 11, color: colors.ink }}>
+                {sw ? 'Mpangilio' : 'Format'}
+              </Text>
+              <Icon name={sidebarOpen ? 'chevron-back' : 'chevron-forward'} size={13} />
+            </Pressable>
+          </View>
         </View>
         <View style={{ flex: 1, flexDirection: 'row' }}>
           {sidebarOpen ? (
@@ -318,7 +326,7 @@ export default function NoteScreen() {
             }}
             style={{ flex: 1, minWidth: 0, position: 'relative' }}
           >
-            <View style={{ flex: 1, paddingHorizontal: sidebarOpen ? 14 : 22 }}>
+            <View style={{ flex: 1, paddingHorizontal: sidebarOpen ? 8 : 14 }}>
               <RichEditor
                 key={note.id}
                 ref={editor}
@@ -355,7 +363,7 @@ export default function NoteScreen() {
             />
           </View>
         </View>
-        {error ? <Text style={[styles.error, { paddingHorizontal: 20 }]}>{error}</Text> : null}
+        {error ? <Text style={[styles.error, { paddingHorizontal: 14 }]}>{error}</Text> : null}
       </KeyboardAvoidingView>
       <Sheet
         visible={dialog !== null}

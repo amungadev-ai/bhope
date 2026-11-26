@@ -20,10 +20,10 @@ export function EditorToolbar({ onCommand }: { onCommand: (command: EditorComman
       nativeID="note-formatting-sidebar"
       testID="formatting-sidebar"
       style={{
-        width: 68,
-        marginLeft: 10,
-        marginBottom: 8,
-        borderRadius: 16,
+        width: 60,
+        marginLeft: 6,
+        marginBottom: 6,
+        borderRadius: 14,
         backgroundColor: colors.soft,
         overflow: 'hidden',
       }}
@@ -31,7 +31,7 @@ export function EditorToolbar({ onCommand }: { onCommand: (command: EditorComman
       <ScrollView
         showsVerticalScrollIndicator
         keyboardShouldPersistTaps="always"
-        contentContainerStyle={{ paddingVertical: 6, gap: 2 }}
+        contentContainerStyle={{ paddingVertical: 4, gap: 0 }}
       >
         {tools.map((tool) => (
           <Pressable
@@ -40,11 +40,11 @@ export function EditorToolbar({ onCommand }: { onCommand: (command: EditorComman
             accessibilityLabel={tool.label}
             onPress={() => onCommand(tool.command)}
             style={{
-              minHeight: 52,
+              minHeight: 44,
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 4,
-              paddingHorizontal: 3,
+              gap: 2,
+              paddingHorizontal: 2,
             }}
           >
             {tool.icon ? (
@@ -52,10 +52,17 @@ export function EditorToolbar({ onCommand }: { onCommand: (command: EditorComman
             ) : (
               <Text
                 style={{
-                  fontFamily: fonts.bold,
+                  fontFamily: tool.command === 'italic' ? fonts.italic : fonts.bold,
                   fontSize: 17,
+                  width: 30,
+                  height: 26,
+                  lineHeight: 24,
+                  paddingHorizontal: 4,
+                  textAlign: 'center',
+                  textAlignVertical: 'center',
+                  includeFontPadding: true,
                   color: colors.ink,
-                  fontStyle: tool.command === 'italic' ? 'italic' : 'normal',
+                  fontStyle: 'normal',
                   textDecorationLine: tool.command === 'underline' ? 'underline' : 'none',
                 }}
               >
@@ -64,7 +71,7 @@ export function EditorToolbar({ onCommand }: { onCommand: (command: EditorComman
             )}
             <Text
               numberOfLines={1}
-              style={{ fontFamily: fonts.body, fontSize: 9, color: colors.muted }}
+              style={{ fontFamily: fonts.body, fontSize: 9, lineHeight: 11, color: colors.muted }}
             >
               {tool.label}
             </Text>

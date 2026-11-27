@@ -1,11 +1,14 @@
-const CACHE = 'bhope-studio-shell-v1';
+const CACHE = 'bhope-studio-shell-v2';
+// Every path is relative to the worker's own scope, so the same files work
+// whether the studio is served at '/' (Vercel) or '/console/' (by the API).
+const base = new URL(self.registration ? self.registration.scope : '/').pathname;
 const SHELL = [
-  '/console/offline.html',
-  '/console/offline.css',
-  '/console/manifest.webmanifest',
-  '/console/icon-192.png',
-  '/console/icon-512.png',
-];
+  'offline.html',
+  'offline.css',
+  'manifest.webmanifest',
+  'icon-192.png',
+  'icon-512.png',
+].map((path) => `${base}${path}`);
 self.addEventListener('install', (event) =>
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))),
 );
@@ -32,12 +35,12 @@ self.addEventListener('fetch', (event) => {
   if (
     event.request.method !== 'GET' ||
     url.origin !== self.location.origin ||
-    !url.pathname.startsWith('/console/')
+    !url.pathname.startsWith(base)
   )
     return;
   if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(() => caches.match('/console/offline.html')));
-  } else if (url.pathname.startsWith('/console/assets/') || SHELL.includes(url.pathname)) {
+    event.respondWith(fetch(event.request).catch(() => caches.match(`${base}offline.html`)));
+  } else if (url.pathname.startsWith(`${base}assets/`) || SHELL.includes(url.pathname)) {
     event.respondWith(
       caches.match(event.request).then(
         (saved) =>

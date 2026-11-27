@@ -16,7 +16,12 @@ export function registerStudioWorker() {
     window.dispatchEvent(new Event('studio-install-ready'));
   });
   void navigator.serviceWorker
-    .register('/console/sw.js', { scope: '/console/', updateViaCache: 'none' })
+    // BASE_URL is '/' when the studio is deployed to its own origin (Vercel)
+    // and '/console/' when the API hosts it, so both layouts install cleanly.
+    .register(`${import.meta.env.BASE_URL}sw.js`, {
+      scope: import.meta.env.BASE_URL,
+      updateViaCache: 'none',
+    })
     .then((registration) => {
       const announce = () => {
         waiting = registration.waiting;

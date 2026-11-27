@@ -145,7 +145,10 @@ export function createApp(
   const cookieOptions = {
     httpOnly: true,
     secure: config.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
+    // SameSite=None lets the Vercel-hosted dashboard keep its session cookie
+    // on cross-site requests; Lax would drop it after login (every later
+    // call silently unauthenticated). Dev stays Lax behind the Vite proxy.
+    sameSite: (config.NODE_ENV === 'production' ? 'none' : 'lax') as 'none' | 'lax',
     path: '/',
     maxAge: 7 * 86400000,
   };

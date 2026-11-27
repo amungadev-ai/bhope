@@ -26,7 +26,8 @@
     "deploy:prepare": "npm run build && node scripts/prepare-api.mjs",
     "deploy:zip": "node scripts/zip-api.mjs",
     "format": "prettier --write \"apps/**/*.{ts,tsx,js,cjs,css,json}\" \"packages/**/*.{js,mjs,ts,json}\" \"scripts/*.mjs\" \"docs/*.md\" README.md package.json .prettierrc.json",
-    "editor:build": "node scripts/build-editor.mjs"
+    "editor:build": "node scripts/build-editor.mjs",
+    "mobile:connect": "node scripts/connect-mobile-api.mjs"
   },
   "devDependencies": {
     "fast-xml-parser": "^5.12.1",

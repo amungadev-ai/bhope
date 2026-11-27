@@ -16,10 +16,16 @@ function loadApi(value, fetch) {
     exports: module.exports,
     process: { env: value === undefined ? {} : { EXPO_PUBLIC_API_URL: value } },
     AbortSignal,
+    Headers,
     fetch,
     require(name) {
-      assert.equal(name, './session');
-      return { getToken: async () => undefined };
+      if (name === './session') return { getToken: async () => null };
+      assert.equal(name, './api-core');
+      const core = require('../src/lib/api-core.ts');
+      return {
+        ...core,
+        createApiClient: (baseUrl, readToken) => core.createApiClient(baseUrl, readToken, fetch),
+      };
     },
   });
   return module.exports;
@@ -30,7 +36,7 @@ for (const value of [undefined, '', ' \n ']) {
     let request;
     const { api, apiUrl } = loadApi(value, async (url, options) => {
       request = { url, options };
-      return { ok: true, status: 201, json: async () => ({ user: { role: 'user' } }) };
+      return Response.json({ user: { role: 'user' } }, { status: 201 });
     });
     const body = JSON.stringify({
       name: 'Reader',
@@ -38,11 +44,11 @@ for (const value of [undefined, '', ' \n ']) {
       password: 'Test-only-password42',
     });
     const result = await api('/auth/register', { method: 'POST', body });
-    assert.equal(apiUrl, 'https://bhope-api.billucsolutions.co.ke/api/v1');
-    assert.equal(request.url, 'https://bhope-api.billucsolutions.co.ke/api/v1/auth/register');
+    assert.equal(apiUrl, 'https://api.billucsolutions.co.ke/api/v1');
+    assert.equal(request.url, 'https://api.billucsolutions.co.ke/api/v1/auth/register');
     assert.equal(request.options.method, 'POST');
     assert.equal(request.options.body, body);
-    assert.equal(request.options.headers['Content-Type'], 'application/json');
+    assert.equal(request.options.headers.get('Content-Type'), 'application/json');
     assert.equal(result.user.role, 'user');
   });
 }
@@ -51,7 +57,7 @@ test('an explicit local API override is trimmed and preserves the registration r
   let destination;
   const { api } = loadApi('  http://192.168.1.20:4000/api/v1///  ', async (url) => {
     destination = url;
-    return { ok: true, status: 201, json: async () => ({}) };
+    return Response.json({}, { status: 201 });
   });
   await api('/auth/register', { method: 'POST', body: '{}' });
   assert.equal(destination, 'http://192.168.1.20:4000/api/v1/auth/register');
@@ -64,4 +70,12 @@ test('an unavailable network reports a useful error instead of disabling account
   await assert.rejects(api('/auth/register', { method: 'POST', body: '{}' }), {
     message: 'Could not reach Beacon of Hope. Check your connection and API address.',
   });
+});
+
+test('a malformed API setting leaves imports available for offline screens', async () => {
+  const { api, apiUrl } = loadApi('https://invalid.test/api/v1/api/v1', async () => {
+    assert.fail('A malformed address must not make a request.');
+  });
+  assert.equal(apiUrl, '');
+  await assert.rejects(api('/health'), /Bible and notebook remain available offline/);
 });

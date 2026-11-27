@@ -21,6 +21,33 @@ export default function AccountScreen() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connection, setConnection] = useState('');
+  async function testConnection() {
+    setTestingConnection(true);
+    setConnection('');
+    try {
+      const result = await api<{
+        service?: string;
+        apiVersion?: number;
+        client?: string;
+        build?: string;
+      }>('/health');
+      if (
+        result.service !== 'beacon-of-hope-api' ||
+        result.apiVersion !== 1 ||
+        result.client !== 'mobile'
+      )
+        throw new Error('Upload the clean mobile backend before testing this connection.');
+      setConnection('Connected · ' + result.build);
+    } catch (failure) {
+      setConnection(
+        failure instanceof Error ? failure.message : 'The API connection could not be checked.',
+      );
+    } finally {
+      setTestingConnection(false);
+    }
+  }
   useEffect(() => {
     let active = true;
     void api<User>('/auth/me')
@@ -164,6 +191,15 @@ export default function AccountScreen() {
         </View>
       )}
       {error ? <Text style={styles.error}>{error}</Text> : null}
+      {__DEV__ ? (
+        <View style={styles.card}>
+          <Label>DEVELOPMENT CONNECTION CHECK</Label>
+          <Button secondary busy={testingConnection} onPress={() => void testConnection()}>
+            Test API connection
+          </Button>
+          {connection ? <Body muted>{connection}</Body> : null}
+        </View>
+      ) : null}
     </Screen>
   );
 }

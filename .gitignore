@@ -16,3 +16,4 @@ apps/mobile/assets/private-bible/
 .DS_Store
 playwright-report/
 test-results/
+.next/

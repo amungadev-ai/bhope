@@ -1,0 +1,35 @@
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: #f6f7f1;
+  color: #193b32;
+  font-family: system-ui, sans-serif;
+}
+main {
+  max-width: 420px;
+  padding: 32px;
+}
+span {
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+h1 {
+  font:
+    normal 42px Georgia,
+    serif;
+}
+p {
+  line-height: 1.8;
+  color: #69776b;
+}
+a {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 14px 24px;
+  background: #214b3b;
+  color: white;
+  border-radius: 12px;
+  text-decoration: none;
+}
